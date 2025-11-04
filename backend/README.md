@@ -19,6 +19,7 @@ DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@[HOST]:5432/postgres
 ```
 
 **To get your Supabase connection string:**
+
 1. Go to your Supabase project dashboard
 2. Click Settings → Database
 3. Copy the "Connection string" (URI format)
@@ -62,6 +63,7 @@ python backend/scripts/seed_test_data.py
 ```
 
 This creates:
+
 - 2 test dealerships (Tesla Oslo, VW Bergen)
 - 4 users (2 per dealership)
 - 20 leads (10 per dealership)
@@ -146,6 +148,7 @@ leads = db.query(Lead).all()  # Automatically filtered by dealership_id
 After completing the database setup:
 
 1. **Week 3, Days 4-5**: Implement Core API endpoints
+
    - Authentication middleware (Clerk integration)
    - Lead CRUD endpoints
    - Webhook endpoints
@@ -161,6 +164,7 @@ See `docs/PRD.md` for the complete roadmap.
 ### Connection Error
 
 If you get "could not connect to server":
+
 - Verify your DATABASE_URL is correct
 - Check that Supabase project is active
 - Ensure your IP is allowed in Supabase settings
@@ -168,6 +172,7 @@ If you get "could not connect to server":
 ### Migration Error
 
 If `alembic upgrade head` fails:
+
 - Check DATABASE_URL is set in .env
 - Verify database credentials are correct
 - Try running migrations with `--sql` flag to see generated SQL
@@ -175,7 +180,7 @@ If `alembic upgrade head` fails:
 ### Import Error
 
 If you get import errors:
+
 - Ensure virtual environment is activated
 - Verify all dependencies are installed: `pip install -r requirements.txt`
 - Check you're in the correct directory
-

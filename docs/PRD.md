@@ -1319,8 +1319,8 @@ async def process_new_lead(job):
 ### Week 3 (Nov 4-10): Backend Foundation
 
 **Day 1-2: Project Setup**
-- [ ] Initialize Git repositories (norvalt-backend, norvalt-frontend)
-- [ ] Initialize FastAPI project structure
+- [x] Initialize Git repositories (norvalt-backend, norvalt-frontend)
+- [x] Initialize FastAPI project structure
 - [ ] Set up virtual environment and dependencies
 - [ ] Create `requirements.txt` with core packages
 - [ ] Initialize Next.js 14 project with App Router
