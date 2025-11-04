@@ -101,7 +101,7 @@ def upgrade() -> None:
         sa.Column('sender', sa.String(255), nullable=True),
         sa.Column('sender_type', sa.String(20), nullable=True),
         sa.Column('message_content', sa.Text(), nullable=False),
-        sa.Column('metadata', postgresql.JSONB(), nullable=True),
+        sa.Column('message_metadata', postgresql.JSONB(), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(['lead_id'], ['leads.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['dealership_id'], ['dealerships.id'], ondelete='CASCADE'),

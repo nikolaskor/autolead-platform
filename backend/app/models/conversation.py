@@ -33,7 +33,7 @@ class Conversation(Base):
     message_content = Column(String, nullable=False)
     
     # Metadata (flexible storage for channel-specific data)
-    metadata = Column(JSONB, nullable=True)
+    message_metadata = Column(JSONB, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
