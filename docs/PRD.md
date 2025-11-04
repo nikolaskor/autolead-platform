@@ -1339,11 +1339,11 @@ npm install @clerk/nextjs recharts date-fns
 ```
 
 **Day 3: Database Setup**
-- [ ] Create Supabase project
-- [ ] Run database migrations (create all tables)
-- [ ] Set up RLS policies
-- [ ] Seed test data (2 dealerships, 10 leads each)
-- [ ] Test database connections
+- [x] Create Supabase project
+- [x] Run database migrations (create all tables)
+- [x] Set up RLS policies
+- [x] Seed test data (2 dealerships, 10 leads each)
+- [x] Test database connections
 
 **Day 4-5: Core API**
 - [ ] Implement CRUD endpoints for leads
