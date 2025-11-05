@@ -50,8 +50,9 @@ Railway will automatically deploy on git push to main branch.
 ### Production Settings
 
 Make sure to:
+
 - Set `DEBUG=False` in production
-- Use production Clerk keys (sk_live_, pk_live_)
+- Use production Clerk keys (sk*live*, pk*live*)
 - Configure CORS for your frontend domain
 - Set up monitoring and alerts
 
@@ -83,10 +84,12 @@ railway logs
 ### Common Issues
 
 1. **Database Connection Fails**
+
    - Verify DATABASE_URL is correct
    - Check Supabase allows Railway's IP
 
 2. **Import Errors**
+
    - Ensure all dependencies in requirements.txt
    - Check Python version compatibility
 
@@ -112,4 +115,3 @@ If using Render instead of Railway:
 3. Set up monitoring (Sentry, etc.)
 4. Configure custom domain
 5. Set up CI/CD pipeline
-

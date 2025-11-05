@@ -345,11 +345,13 @@ After the database setup is complete, the next phase is **Core API Implementatio
 #### 2. Pydantic Schemas ✅
 
 - [x] **Common schemas** (`app/schemas/common.py`)
+
   - ErrorResponse - Standard error format
   - SuccessResponse - Success messages
   - PaginatedResponse - Generic pagination wrapper
 
 - [x] **Lead schemas** (`app/schemas/lead.py`)
+
   - LeadBase - Base fields
   - LeadCreate - Create validation with EmailStr
   - LeadUpdate - Partial updates
@@ -363,6 +365,7 @@ After the database setup is complete, the next phase is **Core API Implementatio
 #### 3. API Endpoints ✅
 
 - [x] **Lead endpoints** (`app/api/v1/endpoints/leads.py`)
+
   - GET /api/v1/leads - List with pagination, filters, search
   - GET /api/v1/leads/{id} - Get single lead
   - POST /api/v1/leads - Create lead (manual)
@@ -386,12 +389,14 @@ After the database setup is complete, the next phase is **Core API Implementatio
 #### 5. Testing ✅
 
 - [x] Test fixtures (`tests/conftest.py`)
+
   - Mock Clerk JWT verification
   - Test database session
   - Sample data fixtures (dealership, user, lead)
   - Auth headers fixture
 
 - [x] Authentication tests (`tests/test_api_auth.py`)
+
   - Health check without auth
   - Endpoints require authentication
   - Invalid token rejection
@@ -409,6 +414,7 @@ After the database setup is complete, the next phase is **Core API Implementatio
 #### 6. Documentation ✅
 
 - [x] API Testing Guide (`backend/API_TESTING.md`)
+
   - Local testing instructions
   - Example curl commands
   - Manual testing checklist
@@ -431,6 +437,7 @@ email-validator==2.3.0              # Email validation
 ### Files Created
 
 **Core API (9 files):**
+
 ```
 backend/app/core/auth.py
 backend/app/core/exceptions.py
@@ -447,6 +454,7 @@ backend/app/schemas/conversation.py
 ```
 
 **Tests (3 files):**
+
 ```
 backend/tests/conftest.py
 backend/tests/test_api_auth.py
@@ -454,12 +462,14 @@ backend/tests/test_api_leads.py
 ```
 
 **Documentation (2 files):**
+
 ```
 backend/API_TESTING.md
 backend/DEPLOYMENT.md
 ```
 
 **Modified Files:**
+
 ```
 backend/main.py (enhanced)
 backend/requirements.txt (new dependencies)
@@ -482,10 +492,12 @@ backend/app/core/config.py (added Clerk settings)
 ### API Endpoints Available
 
 **Public (No Auth):**
+
 - GET / - Root endpoint
 - GET /health - Health check
 
 **Authenticated:**
+
 - GET /api/v1/leads - List leads (paginated, filtered, searchable)
 - GET /api/v1/leads/{id} - Get single lead
 - POST /api/v1/leads - Create lead
@@ -499,11 +511,13 @@ backend/app/core/config.py (added Clerk settings)
 #### Immediate (Before Deployment)
 
 1. **Test with real Clerk JWT tokens**
+
    - Set up frontend with Clerk
    - Test authentication flow end-to-end
    - Verify multi-tenant isolation
 
 2. **Configure test database**
+
    - Set up PostgreSQL test database OR
    - Adjust models for SQLite compatibility
 
@@ -515,6 +529,7 @@ backend/app/core/config.py (added Clerk settings)
 #### Deployment (Manual Steps Required)
 
 1. **Deploy to Railway**
+
    - Create Railway account
    - Connect GitHub repository
    - Configure environment variables
@@ -529,6 +544,7 @@ backend/app/core/config.py (added Clerk settings)
 #### Week 4 (Next Phase)
 
 1. **Frontend Setup**
+
    - Initialize Next.js project
    - Integrate Clerk authentication
    - Create dashboard layout

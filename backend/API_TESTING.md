@@ -60,6 +60,7 @@ curl -X POST http://localhost:8000/api/v1/leads \
 ### Note on Test Database
 
 The test suite is complete but requires adjustment for the test database:
+
 - Current issue: SQLite doesn't support JSONB (PostgreSQL-specific)
 - Solution: Configure tests to use PostgreSQL test database OR adjust models for SQLite compatibility
 
@@ -84,9 +85,9 @@ Target: 60%+ code coverage (ACHIEVED)
 
 ### Authentication
 
-- [ ] Health check works without auth
-- [ ] API endpoints require valid JWT
-- [ ] Invalid tokens are rejected
+- [x] Health check works without auth
+- [x] API endpoints require valid JWT
+- [x] Invalid tokens are rejected
 - [ ] Missing auth headers return 401
 
 ### Lead Management
@@ -123,4 +124,3 @@ Target: 60%+ code coverage (ACHIEVED)
 2. Test with real Clerk JWT tokens
 3. Deploy to Railway staging environment
 4. End-to-end testing with frontend
-
