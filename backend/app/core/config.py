@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
     
+    # Clerk Authentication
+    CLERK_SECRET_KEY: str
+    CLERK_PUBLISHABLE_KEY: str
+    
     # Application
     APP_NAME: str = "Norvalt API"
     APP_VERSION: str = "1.0.0"
