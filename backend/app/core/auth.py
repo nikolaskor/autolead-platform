@@ -19,48 +19,26 @@ logger = logging.getLogger(__name__)
 
 def get_jwks_url() -> str:
     """
-    Construct JWKS URL from Clerk publishable key.
+    Get JWKS URL from environment configuration.
     
-    Clerk publishable keys have format: pk_test_[base64]  or pk_live_[base64]
-    The JWKS URL is: https://[instance].clerk.accounts.dev/.well-known/jwks.json
+    The JWKS URL is specific to each Clerk instance and should be configured
+    in the CLERK_JWKS_URL environment variable. You can find this URL in your
+    Clerk dashboard under API Keys.
     
     Returns:
         str: JWKS endpoint URL
+        
+    Raises:
+        UnauthorizedException: If JWKS URL is not configured
     """
-    # Extract instance from publishable key
-    # For now, we'll use a generic approach and extract domain from the key
-    # Clerk provides JWKS at a standard location
-    pub_key = settings.CLERK_PUBLISHABLE_KEY
+    if settings.CLERK_JWKS_URL:
+        return settings.CLERK_JWKS_URL
     
-    # Determine if test or production
-    if pub_key.startswith("pk_test_"):
-        # Test environment - clerk uses clerk.accounts.dev domain
-        # We'll construct the URL dynamically
-        # For testing, we can use the frontend API from the publishable key
-        # Format: https://[frontend-api].clerk.accounts.dev/.well-known/jwks.json
-        
-        # Extract the base64 part after pk_test_ to derive the instance
-        # However, Clerk also provides a simpler approach:
-        # We can use the SECRET_KEY to derive the issuer domain
-        
-        # For Clerk, the issuer is typically in the JWT itself
-        # We'll fetch JWKS from the standard location
-        # Using a placeholder - in practice, decode a test JWT to get the issuer
-        # For now, we'll use the secret key prefix to find the instance
-        
-        # Clerk's JWKS is at: https://clerk.[instance].com/.well-known/jwks.json
-        # OR https://[instance].clerk.accounts.dev/.well-known/jwks.json
-        
-        # Simplified: Use Clerk's provided frontend API
-        # The frontend API is embedded in the publishable key or can be inferred
-        
-        # Let's use a more direct approach:
-        # Clerk recommends using the issuer from the JWT to construct JWKS URL
-        # For simplicity, we'll hardcode for testing and make it configurable
-        return "https://clerk.accounts.dev/.well-known/jwks.json"
-    else:
-        # Production environment
-        return "https://clerk.accounts.dev/.well-known/jwks.json"
+    # Fallback error message
+    raise UnauthorizedException(
+        "CLERK_JWKS_URL must be configured in environment variables. "
+        "Find it in your Clerk dashboard under API Keys > JWKS URL."
+    )
 
 
 @lru_cache(maxsize=1)
