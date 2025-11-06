@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     CLERK_SECRET_KEY: str
     CLERK_PUBLISHABLE_KEY: str
     CLERK_JWKS_URL: Optional[str] = None
+    CLERK_WEBHOOK_SECRET: str
     
     # Application
     APP_NAME: str = "Norvalt API"

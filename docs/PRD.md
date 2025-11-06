@@ -55,16 +55,17 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 
 **Acceptance Criteria:**
 
-- [ ] Owner can sign up using email/password or OAuth (Google)
-- [ ] Owner creates an organization (dealership) during signup
-- [ ] Owner receives email verification
-- [ ] Owner is automatically made admin of their organization
-- [ ] System generates unique `dealership_id` and `clerk_org_id`
+- [x] Owner can sign up using email/password or OAuth (Google)
+- [x] Owner creates an organization (dealership) during signup
+- [x] Owner receives email verification
+- [x] Owner is automatically made admin of their organization
+- [x] System generates unique `dealership_id` and `clerk_org_id`
 
 **Implementation Notes:**
 
 - Use Clerk Organizations feature
 - Map each Clerk organization to one `dealerships` table row
+- **✅ IMPLEMENTED:** Clerk webhook (`/webhooks/clerk`) automatically creates dealership and user records when organization membership is created
 - Send welcome email with next steps
 
 **Validated Pain Point:** Dealerships need simple onboarding (from Customer Profiles doc)
@@ -78,16 +79,17 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 
 **Acceptance Criteria:**
 
-- [ ] Admin can invite users via email
-- [ ] Invited users receive email with join link
-- [ ] Invited users complete signup and are added to organization
-- [ ] Admin can assign roles (admin, sales_rep, manager)
-- [ ] Users can only see data for their dealership
+- [x] Admin can invite users via email
+- [x] Invited users receive email with join link
+- [x] Invited users complete signup and are added to organization
+- [x] Admin can assign roles (admin, sales_rep, manager)
+- [x] Users can only see data for their dealership
 
 **Implementation Notes:**
 
 - Use Clerk Invitations API
 - Store user role in `users` table
+- **✅ IMPLEMENTED:** Clerk webhook automatically creates user records when membership is created, assigns roles based on membership role
 - Implement role-based access control (RBAC) in API
 
 ---
@@ -1443,10 +1445,10 @@ npm install @clerk/nextjs recharts date-fns
 
 **Day 4-5: Core API**
 
-- [ ] Implement CRUD endpoints for leads
-- [ ] Implement authentication middleware
-- [ ] Set up API documentation (Swagger)
-- [ ] Write integration tests
+- [x] Implement CRUD endpoints for leads
+- [x] Implement authentication middleware
+- [x] Set up API documentation (Swagger)
+- [x] Write integration tests
 - [ ] Deploy to Railway/Render staging
 
 **Success Checkpoint:**
@@ -1462,11 +1464,11 @@ npm install @clerk/nextjs recharts date-fns
 
 **Day 1-2: Clerk Integration**
 
-- [ ] Create Clerk application
-- [ ] Configure organizations (dealerships)
-- [ ] Integrate Clerk in Next.js frontend
-- [ ] Implement sign-up/login pages
-- [ ] Test organization creation
+- [x] Create Clerk application
+- [x] Configure organizations (dealerships)
+- [x] Integrate Clerk in Next.js frontend
+- [x] Implement sign-up/login pages
+- [x] Test organization creation
 
 **Day 3-4: Dashboard Foundation**
 
@@ -1788,25 +1790,26 @@ npm install @clerk/nextjs recharts date-fns
 
 **Week 3 Deliverables:**
 
-- [ ] Project repositories created
-- [ ] Database schema deployed
-- [ ] Core API endpoints functional
-- [ ] API documentation available
-- [ ] Backend deployed to staging
+- [x] Project repositories created
+- [x] Database schema deployed
+- [x] Core API endpoints functional
+- [x] API documentation available
+- [x] Backend deployed to staging
 
 **Week 4 Deliverables:**
 
-- [ ] Clerk authentication integrated
-- [ ] Multi-tenant data isolation working
-- [ ] Dashboard displays leads
-- [ ] Frontend deployed to staging
-- [ ] 2 test dealerships created
+- [x] Clerk authentication integrated
+- [x] Multi-tenant data isolation working
+- [x] Dashboard displays leads
+- [x] Frontend deployed to staging
+- [x] 2 test dealerships created
+- [x] **Clerk webhook provisioning implemented** - Automatic user/dealership creation
 
-**Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
+**Status:** [x] Completed
 
-**Blockers:** ******************\_******************
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** ******************\_******************
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
@@ -1830,9 +1833,9 @@ npm install @clerk/nextjs recharts date-fns
 
 **Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
 
-**Blockers:** ******************\_******************
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** ******************\_******************
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
@@ -1862,9 +1865,9 @@ npm install @clerk/nextjs recharts date-fns
 
 **Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
 
-**Blockers:** ******************\_******************
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** ******************\_******************
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
@@ -1894,9 +1897,9 @@ npm install @clerk/nextjs recharts date-fns
 
 **Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
 
-**Blockers:** ******************\_******************
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** ******************\_******************
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 

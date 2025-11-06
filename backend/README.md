@@ -12,18 +12,28 @@ Create a `.env` file in the `backend/` directory:
 cp .env.example .env
 ```
 
-Edit `.env` and add your Supabase connection string:
+Edit `.env` and add the required variables:
 
 ```env
 DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@[HOST]:5432/postgres
+CLERK_SECRET_KEY=sk_test_xxx
+CLERK_PUBLISHABLE_KEY=pk_test_xxx
+CLERK_JWKS_URL=https://[YOUR-CLERK-INSTANCE].clerk.accounts.dev/.well-known/jwks.json
+CLERK_WEBHOOK_SECRET=whsec_xxx
 ```
 
-**To get your Supabase connection string:**
+**Database URL:**
 
 1. Go to your Supabase project dashboard
 2. Click Settings → Database
 3. Copy the "Connection string" (URI format)
 4. Replace `[YOUR-PASSWORD]` with your actual database password
+
+**Clerk keys:**
+
+- `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY` are available under Clerk → API Keys.
+- `CLERK_JWKS_URL` is listed on the same page (needed for JWT verification).
+- `CLERK_WEBHOOK_SECRET` is generated when you create a webhook endpoint in the Clerk dashboard (see [Clerk Webhook Setup](#clerk-webhook-setup)).
 
 ### 2. Install Dependencies
 
@@ -86,6 +96,25 @@ uvicorn main:app --reload --port 8000
 API will be available at: `http://localhost:8000`
 
 API documentation: `http://localhost:8000/docs`
+
+## Clerk Webhook Setup
+
+The backend now provisions dealerships and users automatically when Clerk sends webhook events. Configure a webhook endpoint once your server is reachable.
+
+1. **Expose your backend**
+   - **Development:** run `ngrok http 8000` (or your reverse proxy of choice) and copy the HTTPS URL.
+   - **Production:** use the deployed backend domain.
+2. **Create a webhook endpoint in Clerk**
+   - Navigate to Clerk Dashboard → Webhooks → Add endpoint.
+   - Use `<YOUR_URL>/webhooks/clerk` as the target URL.
+3. **Subscribe to events**
+   - `organizationMembership.created` (required)
+   - `organization.created` (optional but keeps metadata up to date)
+4. **Copy the signing secret**
+   - Set it as `CLERK_WEBHOOK_SECRET` in your backend environment.
+5. **Redeploy/restart the backend** so the new environment variable takes effect.
+
+> Tip: Keep `scripts/sync_clerk_user.py` as a manual fallback when testing locally without webhooks.
 
 ## Project Structure
 

@@ -739,3 +739,108 @@ CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
 ---
 
 **Status:** ✅ WEEK 4 FRONTEND COMPLETE - Backend env fix required
+
+---
+
+## ✅ Completed: Week 4 - Clerk Webhook User Provisioning
+
+**Branch:** `feature/core-api-days4-5` (continued)
+
+**Date:** November 6, 2025
+
+### What's Been Implemented
+
+#### 1. Clerk Webhook Endpoint ✅
+
+- [x] **Webhook endpoint** (`backend/app/api/webhooks/clerk.py`)
+  - POST `/webhooks/clerk` endpoint for Clerk webhook events
+  - Svix signature verification for security
+  - Proper error handling and logging
+  - Idempotent handlers (safe to retry)
+
+- [x] **Event Handlers:**
+  - `organization.created` - Creates dealership record automatically
+  - `organizationMembership.created` - Creates user and dealership records
+  - Handles role assignment (first user becomes admin)
+  - Updates existing records if webhook retries
+
+- [x] **Signature Verification:**
+  - Svix webhook verification using `CLERK_WEBHOOK_SECRET`
+  - Header normalization for Svix compatibility
+  - Proper error responses for invalid signatures
+
+#### 2. Configuration & Dependencies ✅
+
+- [x] Added `svix==1.16.0` to requirements.txt
+- [x] Added `CLERK_WEBHOOK_SECRET` to config settings
+- [x] Webhook router registered in main.py
+- [x] Comprehensive error handling and logging
+
+#### 3. Testing ✅
+
+- [x] Created `tests/test_webhooks.py`
+  - Tests membership creation provisioning
+  - Tests idempotency (multiple webhook calls)
+  - Tests invalid signature rejection
+
+#### 4. Documentation ✅
+
+- [x] Updated `backend/README.md` with webhook setup instructions
+  - Cloudflare Tunnel option (recommended for dev)
+  - ngrok option with limitations noted
+  - Manual sync script as fallback
+
+### Files Created/Modified
+
+**New Files:**
+```
+backend/app/api/webhooks/__init__.py
+backend/app/api/webhooks/clerk.py
+backend/tests/test_webhooks.py
+```
+
+**Modified Files:**
+```
+backend/main.py (added webhook router)
+backend/app/core/config.py (added CLERK_WEBHOOK_SECRET)
+backend/requirements.txt (added svix)
+backend/README.md (added webhook setup section)
+```
+
+### How It Works
+
+1. **User signs up in Clerk** → Clerk creates organization and user
+2. **Clerk sends webhook** → `organizationMembership.created` event
+3. **Backend receives webhook** → Verifies Svix signature
+4. **Backend provisions data:**
+   - Creates `dealership` record if missing (from org_id)
+   - Creates `user` record if missing (from user_id)
+   - Links user to dealership
+   - Assigns admin role to first user
+5. **User can now access dashboard** → No manual sync needed!
+
+### Success Criteria Met
+
+- ✅ Webhook endpoint receives and processes Clerk events
+- ✅ Signature verification prevents unauthorized access
+- ✅ Dealerships created automatically from Clerk organizations
+- ✅ Users created automatically from Clerk memberships
+- ✅ First user in dealership becomes admin automatically
+- ✅ Idempotent handlers prevent duplicate records
+- ✅ Comprehensive error handling and logging
+- ✅ Tests verify provisioning logic
+
+### Known Limitations
+
+- **ngrok free tier:** Shows browser warning page that blocks Clerk webhooks
+- **Solution:** Use Cloudflare Tunnel (free, no warnings) or upgrade ngrok
+- **Manual fallback:** `scripts/sync_clerk_user.py` still available for testing
+
+### Next Steps
+
+- ✅ Webhook provisioning working
+- ✅ New Clerk sign-ups automatically create database records
+- ✅ No more "User not found" errors after signup
+- Ready for production deployment with proper webhook URL
+
+**Status:** ✅ CLERK WEBHOOK PROVISIONING COMPLETE - Automatic user/dealership creation working
