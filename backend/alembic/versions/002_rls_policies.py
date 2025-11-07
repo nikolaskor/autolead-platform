@@ -26,40 +26,34 @@ def upgrade() -> None:
     
     # Create RLS policy for leads table
     # Users can only access leads from their dealership
+    # Fail-closed: returns no rows if app.current_dealership_id is unset
     op.execute("""
         CREATE POLICY dealership_isolation_leads ON leads
         FOR ALL
         USING (
-            dealership_id = COALESCE(
-                NULLIF(current_setting('app.current_dealership_id', true), '')::uuid,
-                dealership_id
-            )
+            dealership_id = NULLIF(current_setting('app.current_dealership_id', true), '')::uuid
         )
     """)
     
     # Create RLS policy for conversations table
     # Users can only access conversations from their dealership
+    # Fail-closed: returns no rows if app.current_dealership_id is unset
     op.execute("""
         CREATE POLICY dealership_isolation_conversations ON conversations
         FOR ALL
         USING (
-            dealership_id = COALESCE(
-                NULLIF(current_setting('app.current_dealership_id', true), '')::uuid,
-                dealership_id
-            )
+            dealership_id = NULLIF(current_setting('app.current_dealership_id', true), '')::uuid
         )
     """)
     
     # Create RLS policy for vehicles table
     # Users can only access vehicles from their dealership
+    # Fail-closed: returns no rows if app.current_dealership_id is unset
     op.execute("""
         CREATE POLICY dealership_isolation_vehicles ON vehicles
         FOR ALL
         USING (
-            dealership_id = COALESCE(
-                NULLIF(current_setting('app.current_dealership_id', true), '')::uuid,
-                dealership_id
-            )
+            dealership_id = NULLIF(current_setting('app.current_dealership_id', true), '')::uuid
         )
     """)
 
