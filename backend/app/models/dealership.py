@@ -2,7 +2,7 @@
 Dealership model representing car dealership organizations.
 Each dealership is a separate tenant in the multi-tenant system.
 """
-from sqlalchemy import Column, String, DateTime, func, Index
+from sqlalchemy import Column, String, DateTime, func, Index, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 import uuid
@@ -24,7 +24,7 @@ class Dealership(Base):
     
     # Basic information
     name = Column(String(255), nullable=False)
-    email = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, unique=True)
     phone = Column(String(50), nullable=True)
     address = Column(String, nullable=True)
     
@@ -43,7 +43,16 @@ class Dealership(Base):
     users = relationship("User", back_populates="dealership", cascade="all, delete-orphan")
     leads = relationship("Lead", back_populates="dealership", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="dealership", cascade="all, delete-orphan")
-    
+
+    # Constraints
+    __table_args__ = (
+        # Email validation using PostgreSQL regex (case-insensitive)
+        CheckConstraint(
+            "email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'",
+            name="valid_dealership_email"
+        ),
+    )
+
     def __repr__(self):
         return f"<Dealership(id={self.id}, name='{self.name}')>"
 
