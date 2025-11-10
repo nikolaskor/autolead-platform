@@ -57,6 +57,7 @@ The project uses PostgreSQL (hosted on Supabase) with Row-Level Security (RLS) f
 ### Backend Architecture (FastAPI)
 
 **Technology Stack:**
+
 - FastAPI 0.121.0 with Uvicorn 0.38.0
 - SQLAlchemy 2.0.44 ORM with Alembic migrations
 - PostgreSQL via Supabase
@@ -64,6 +65,7 @@ The project uses PostgreSQL (hosted on Supabase) with Row-Level Security (RLS) f
 - Svix for webhook signature verification
 
 **Key Files:**
+
 - `backend/main.py` - Application entry point with CORS, exception handlers, startup/shutdown events
 - `backend/app/core/config.py` - Pydantic Settings for environment variables
 - `backend/app/core/database.py` - SQLAlchemy engine, session management, connection pooling
@@ -72,20 +74,22 @@ The project uses PostgreSQL (hosted on Supabase) with Row-Level Security (RLS) f
 - `backend/app/api/deps.py` - FastAPI dependencies (`get_current_user`, `get_current_dealership`)
 
 **Database Models** (`backend/app/models/`):
+
 - `Dealership` - Organizations (maps to Clerk orgs via `clerk_org_id`)
 - `User` - Sales reps/managers/admins (maps to Clerk users via `clerk_user_id`)
 - `Lead` - Customer inquiries with status (new, contacted, qualified, won, lost)
 - `Conversation` - Message history between dealership and customers
 
 **API Structure:**
-```
++```text
 /api/v1/
 ├── /leads (GET, POST, PATCH, DELETE)
-│   └── /{lead_id}/conversations (GET)
+│ └── /{lead_id}/conversations (GET)
 └── /conversations (POST)
 
 /webhooks/clerk (POST) - Clerk webhook endpoint
-```
+
+````
 
 **Multi-Tenant Isolation:**
 Each request sets `dealership_id` in PostgreSQL session via `set_dealership_context(db, dealership_id)`. All queries are automatically filtered by RLS policies based on `app.current_dealership_id` session variable.
@@ -100,11 +104,12 @@ dealership_id = COALESCE(
     NULLIF(current_setting('app.current_dealership_id', true), '')::uuid,
     dealership_id  -- This makes it always TRUE when unset!
 )
-```
+````
 
 When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE, so no rows are returned. This prevents accidental cross-tenant data leaks.
 
 **Authentication Flow:**
+
 1. Frontend gets JWT from Clerk via `auth().getToken()`
 2. Backend receives request with `Authorization: Bearer <token>`
 3. JWT verified against Clerk JWKS endpoint (cached with `@lru_cache`)
@@ -112,6 +117,7 @@ When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE,
 5. All queries automatically scoped to user's dealership
 
 **Webhook Provisioning:**
+
 - Clerk sends `organization.created` and `organizationMembership.created` events
 - Backend verifies Svix signature and creates `Dealership` and `User` records automatically
 - First user in dealership becomes admin
@@ -120,6 +126,7 @@ When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE,
 ### Frontend Architecture (Next.js)
 
 **Technology Stack:**
+
 - Next.js 16.0.1 (App Router)
 - React 19.2.0
 - TypeScript 5
@@ -129,13 +136,15 @@ When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE,
 - Lucide React icons
 
 **Key Files:**
+
 - `frontend/middleware.ts` - Clerk middleware for route protection
 - `frontend/app/layout.tsx` - Root layout with ClerkProvider
 - `frontend/lib/api.ts` - API client with authenticated fetch wrapper
 - `frontend/types/index.ts` - TypeScript types matching backend schemas
 
 **Page Structure:**
-```
+
++text```
 /app/
 ├── (auth)/
 │   ├── sign-in/[[...sign-in]]/page.tsx
@@ -149,6 +158,7 @@ When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE,
 
 **API Integration Pattern:**
 Server-side data fetching in async React Server Components:
+
 ```typescript
 // In page.tsx
 const token = await getAuthToken();
@@ -156,11 +166,13 @@ const leads = await fetchLeads(token, filters);
 ```
 
 All API calls use `apiRequest<T>()` wrapper from `lib/api.ts` which:
+
 - Automatically injects Bearer token from Clerk
 - Handles errors with fallback messages
 - Uses `NEXT_PUBLIC_API_URL` (default: http://localhost:8000)
 
 **State Management:**
+
 - No Redux/Context - relies on Next.js App Router server components
 - URL-based filter state (searchParams)
 - Suspense boundaries for loading states
@@ -178,6 +190,7 @@ Backend Pydantic schemas and frontend TypeScript types are **manually synchroniz
 ### Adding a New API Endpoint
 
 1. **Create Pydantic schemas** in `backend/app/schemas/`:
+
    ```python
    class ThingCreate(BaseModel):
        field: str
@@ -191,6 +204,7 @@ Backend Pydantic schemas and frontend TypeScript types are **manually synchroniz
    ```
 
 2. **Create endpoint** in `backend/app/api/v1/endpoints/`:
+
    ```python
    from app.api.deps import get_current_user, get_db
    from app.core.rls import set_dealership_context
@@ -206,15 +220,17 @@ Backend Pydantic schemas and frontend TypeScript types are **manually synchroniz
    ```
 
 3. **Register router** in `backend/app/api/v1/router.py`:
+
    ```python
    from app.api.v1.endpoints import things
    api_router.include_router(things.router, prefix="/things", tags=["things"])
    ```
 
 4. **Add frontend API function** in `frontend/lib/api.ts`:
+
    ```typescript
    export async function fetchThings(token: string): Promise<Thing[]> {
-     return apiRequest<Thing[]>('/api/v1/things', { token });
+     return apiRequest<Thing[]>("/api/v1/things", { token });
    }
    ```
 
@@ -240,6 +256,7 @@ alembic downgrade -1
 ```
 
 **Adding RLS policies** (for multi-tenant tables):
+
 ```sql
 -- In migration file
 op.execute("""
@@ -258,6 +275,7 @@ op.execute("""
 ### Multi-Tenant Context
 
 **Backend:** Always set dealership context in authenticated endpoints:
+
 ```python
 from app.core.rls import set_dealership_context
 
@@ -276,6 +294,7 @@ def list_leads(
 ## Environment Variables
 
 ### Backend `.env`
+
 ```env
 DATABASE_URL=postgresql://user:pass@host:5432/db
 CLERK_SECRET_KEY=sk_test_xxx
@@ -286,6 +305,7 @@ DEBUG=True
 ```
 
 ### Frontend `.env.local`
+
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
 CLERK_SECRET_KEY=sk_test_xxx
@@ -297,11 +317,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ### Backend Tests
 
 Tests use pytest with fixtures in `tests/conftest.py`:
+
 - Mock Clerk JWT verification (no real tokens needed)
 - In-memory SQLite or PostgreSQL test database
 - Sample data fixtures (dealership, user, lead)
 
 **Run tests:**
+
 ```bash
 cd backend
 pytest -v
@@ -321,6 +343,7 @@ Currently manual testing. Future: Add Jest + React Testing Library.
 **Cause:** Webhook not configured or failing.
 
 **Fix:**
+
 1. Verify `CLERK_WEBHOOK_SECRET` is set in backend `.env`
 2. Check webhook endpoint is reachable (use Cloudflare Tunnel for local dev)
 3. In Clerk Dashboard → Webhooks, verify events are being sent
@@ -332,6 +355,7 @@ Currently manual testing. Future: Add Jest + React Testing Library.
 **Cause:** Backend CORS middleware doesn't allow frontend origin.
 
 **Fix:** Add origin to `main.py` CORS middleware:
+
 ```python
 allow_origins=[
     "http://localhost:3000",
@@ -357,6 +381,7 @@ allow_origins=[
 **Cause:** RLS policy uses fail-open pattern with COALESCE fallback.
 
 **Fix:** Ensure all multi-tenant RLS policies use fail-closed pattern:
+
 ```sql
 -- Correct
 dealership_id = NULLIF(current_setting('app.current_dealership_id', true), '')::uuid
@@ -367,6 +392,7 @@ This ensures queries return no rows when context is unset, preventing accidental
 ## Code Style
 
 ### Backend
+
 - Use SQLAlchemy 2.0 style (no legacy query API)
 - Pydantic v2 with `model_config = ConfigDict(from_attributes=True)`
 - Type hints on all functions
@@ -374,6 +400,7 @@ This ensures queries return no rows when context is unset, preventing accidental
 - Use custom exceptions (NotFoundException, UnauthorizedException, ForbiddenException) not generic HTTP exceptions
 
 ### Frontend
+
 - Async Server Components for data fetching (not useEffect)
 - Client Components only when needed (forms, interactivity)
 - Prefer `searchParams` over client-side state for filters
