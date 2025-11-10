@@ -81,20 +81,21 @@ The project uses PostgreSQL (hosted on Supabase) with Row-Level Security (RLS) f
 - `Conversation` - Message history between dealership and customers
 
 **API Structure:**
-+```text
+
+```
 /api/v1/
 ├── /leads (GET, POST, PATCH, DELETE)
-│ └── /{lead_id}/conversations (GET)
+│   └── /{lead_id}/conversations (GET)
 └── /conversations (POST)
 
 /webhooks/clerk (POST) - Clerk webhook endpoint
-
-````
+```
 
 **Multi-Tenant Isolation:**
 Each request sets `dealership_id` in PostgreSQL session via `set_dealership_context(db, dealership_id)`. All queries are automatically filtered by RLS policies based on `app.current_dealership_id` session variable.
 
 **CRITICAL SECURITY:** RLS policies use fail-closed pattern:
+
 ```sql
 -- CORRECT (fail-closed - no rows if context unset)
 dealership_id = NULLIF(current_setting('app.current_dealership_id', true), '')::uuid
@@ -104,7 +105,7 @@ dealership_id = COALESCE(
     NULLIF(current_setting('app.current_dealership_id', true), '')::uuid,
     dealership_id  -- This makes it always TRUE when unset!
 )
-````
+```
 
 When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE, so no rows are returned. This prevents accidental cross-tenant data leaks.
 
@@ -144,7 +145,7 @@ When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE,
 
 **Page Structure:**
 
-+text```
+```
 /app/
 ├── (auth)/
 │   ├── sign-in/[[...sign-in]]/page.tsx

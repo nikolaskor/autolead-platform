@@ -1,6 +1,7 @@
 # Norvalt Product Requirements Document (PRD)
 
 ## Document Control
+
 **Version:** 1.0
 **Last Updated:** November 4, 2025
 **Owner:** Nikolai Skorodihin (Founder) & Helios (CTO)
@@ -12,14 +13,17 @@
 ## Executive Summary
 
 ### MVP Scope
+
 Norvalt is an AI-powered lead management platform that captures leads from all sources (website forms, email, Facebook) and responds with AI in under 90 seconds, 24/7. The MVP enables Norwegian car dealerships to never lose another lead due to slow response times.
 
 ### Business Goals
+
 - **Week 12 (Jan 12):** Production-ready MVP
 - **Week 14 (Jan 26):** First paying customer
 - **Week 20 (Mar 9):** 8-10 customers, profitable (36-45K NOK MRR)
 
 ### Success Criteria
+
 1. All three lead sources (website, email, Facebook) capture leads successfully
 2. AI responds to 95%+ of new leads within 90 seconds
 3. Multi-tenant architecture with proper data isolation
@@ -28,6 +32,7 @@ Norvalt is an AI-powered lead management platform that captures leads from all s
 6. Zero critical security vulnerabilities
 
 ### Timeline Overview
+
 ```
 Week 3-4:   Foundation (Auth, Database, Basic API)
 Week 5-6:   Lead Capture (All Sources Working)
@@ -40,22 +45,27 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 ## User Stories by Epic
 
 ### Epic 1: Authentication & Multi-Tenancy
+
 **Business Value:** Secure, scalable foundation for B2B SaaS platform
 
 #### US-1.1: Dealership Owner Registration
+
 **Priority:** MUST-HAVE
 **Story:** As a dealership owner, I want to create an account for my dealership so that my team can access Norvalt.
 
 **Acceptance Criteria:**
-- [ ] Owner can sign up using email/password or OAuth (Google)
-- [ ] Owner creates an organization (dealership) during signup
-- [ ] Owner receives email verification
-- [ ] Owner is automatically made admin of their organization
-- [ ] System generates unique `dealership_id` and `clerk_org_id`
+
+- [x] Owner can sign up using email/password or OAuth (Google)
+- [x] Owner creates an organization (dealership) during signup
+- [x] Owner receives email verification
+- [x] Owner is automatically made admin of their organization
+- [x] System generates unique `dealership_id` and `clerk_org_id`
 
 **Implementation Notes:**
+
 - Use Clerk Organizations feature
 - Map each Clerk organization to one `dealerships` table row
+- **✅ IMPLEMENTED:** Clerk webhook (`/webhooks/clerk`) automatically creates dealership and user records when organization membership is created
 - Send welcome email with next steps
 
 **Validated Pain Point:** Dealerships need simple onboarding (from Customer Profiles doc)
@@ -63,28 +73,34 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 ---
 
 #### US-1.2: Team Member Invitation
+
 **Priority:** MUST-HAVE
 **Story:** As a dealership admin, I want to invite sales reps to join my organization so they can access leads.
 
 **Acceptance Criteria:**
-- [ ] Admin can invite users via email
-- [ ] Invited users receive email with join link
-- [ ] Invited users complete signup and are added to organization
-- [ ] Admin can assign roles (admin, sales_rep, manager)
-- [ ] Users can only see data for their dealership
+
+- [x] Admin can invite users via email
+- [x] Invited users receive email with join link
+- [x] Invited users complete signup and are added to organization
+- [x] Admin can assign roles (admin, sales_rep, manager)
+- [x] Users can only see data for their dealership
 
 **Implementation Notes:**
+
 - Use Clerk Invitations API
 - Store user role in `users` table
+- **✅ IMPLEMENTED:** Clerk webhook automatically creates user records when membership is created, assigns roles based on membership role
 - Implement role-based access control (RBAC) in API
 
 ---
 
 #### US-1.3: Data Isolation
+
 **Priority:** MUST-HAVE
 **Story:** As a dealership, I want to ensure my leads are private and not visible to other dealerships.
 
 **Acceptance Criteria:**
+
 - [ ] All database queries filtered by `dealership_id`
 - [ ] API extracts `dealership_id` from Clerk JWT
 - [ ] Users cannot access resources from other dealerships
@@ -92,6 +108,7 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 - [ ] Row-level security (RLS) policies enforced in database
 
 **Implementation Notes:**
+
 - Implement middleware in FastAPI to extract and validate `dealership_id`
 - Add RLS policies in Supabase
 - Create comprehensive integration tests
@@ -101,13 +118,16 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 ---
 
 ### Epic 2: Lead Capture System
+
 **Business Value:** Capture leads from all sources without manual work
 
 #### US-2.1: Website Form Webhook
+
 **Priority:** MUST-HAVE
 **Story:** As a dealership, I want leads from my website to automatically appear in Norvalt so I never miss an inquiry.
 
 **Acceptance Criteria:**
+
 - [ ] Public webhook endpoint accepts POST requests
 - [ ] Endpoint validates required fields (name, email, message)
 - [ ] Lead is created in database with source='website'
@@ -116,6 +136,7 @@ Week 10-12: Dashboard & Polish (Production-Ready)
 - [ ] Logs all webhook requests for debugging
 
 **API Specification:**
+
 ```
 POST /webhooks/form/:dealership_id
 Content-Type: application/json
@@ -138,6 +159,7 @@ Response: 200 OK
 ```
 
 **Implementation Steps:**
+
 1. Create `/webhooks/form/:dealership_id` endpoint in FastAPI
 2. Add Pydantic model for request validation
 3. Implement duplicate detection (check email + dealership)
@@ -147,6 +169,7 @@ Response: 200 OK
 7. Test with curl/Postman
 
 **Edge Cases:**
+
 - Duplicate submission within 5 minutes (update existing lead)
 - Missing optional fields (handle gracefully)
 - Invalid email format (return 400 error)
@@ -157,10 +180,12 @@ Response: 200 OK
 ---
 
 #### US-2.2: Email Monitoring (Importer Portals)
+
 **Priority:** MUST-HAVE
 **Story:** As a dealership, I want leads from Toyota.no, VW.no, etc. to automatically appear in Norvalt without checking email manually.
 
 **Acceptance Criteria:**
+
 - [ ] System polls IMAP inbox every 60 seconds
 - [ ] Detects new emails from importer domains
 - [ ] Parses Toyota.no email template correctly
@@ -171,12 +196,14 @@ Response: 200 OK
 - [ ] Handles parsing errors gracefully (alerts admin)
 
 **Database Schema:**
+
 ```sql
 -- Add to leads table
 source_metadata JSONB -- Store raw email data for debugging
 ```
 
 **Implementation Steps:**
+
 1. Set up IMAP connection using Python `imaplib`
 2. Create background worker (BullMQ job) that runs every 60s
 3. Fetch unread emails from inbox
@@ -189,6 +216,7 @@ source_metadata JSONB -- Store raw email data for debugging
 10. Log any parsing failures
 
 **Email Parsing Logic:**
+
 ```python
 # Toyota.no template
 def parse_toyota_email(email_body):
@@ -202,6 +230,7 @@ def parse_toyota_email(email_body):
 ```
 
 **Edge Cases:**
+
 - Email format changes (alert admin, store raw email)
 - Missing fields (create lead with partial data)
 - Non-lead emails (ignore based on subject/sender)
@@ -212,10 +241,12 @@ def parse_toyota_email(email_body):
 ---
 
 #### US-2.3: Facebook Lead Ads Integration
+
 **Priority:** MUST-HAVE
 **Story:** As a dealership, I want leads from my Facebook ads to automatically appear in Norvalt immediately after submission.
 
 **Acceptance Criteria:**
+
 - [ ] Webhook receives Facebook lead notifications
 - [ ] Webhook verifies Facebook signature
 - [ ] Retrieves full lead data via Graph API
@@ -225,6 +256,7 @@ def parse_toyota_email(email_body):
 - [ ] Passes Facebook webhook verification challenge
 
 **API Specification:**
+
 ```
 GET /webhooks/facebook
   - Returns hub.challenge for verification
@@ -236,6 +268,7 @@ POST /webhooks/facebook
 ```
 
 **Implementation Steps:**
+
 1. Create Facebook App in Meta Business Suite
 2. Set up webhook endpoint `/webhooks/facebook`
 3. Implement webhook verification (GET request)
@@ -248,11 +281,13 @@ POST /webhooks/facebook
 10. Queue AI response job
 
 **External Integration:**
+
 - Facebook Graph API: `GET /{lead-id}`
 - Requires: App ID, App Secret, Page Access Token
 - Rate limits: 200 calls per hour per user
 
 **Edge Cases:**
+
 - Webhook signature mismatch (reject request)
 - Graph API timeout (retry with exponential backoff)
 - Missing form fields (map to null)
@@ -263,10 +298,12 @@ POST /webhooks/facebook
 ---
 
 #### US-2.4: Lead Deduplication
+
 **Priority:** SHOULD-HAVE
 **Story:** As a dealership, I want duplicate leads to be merged so I don't contact the same customer multiple times.
 
 **Acceptance Criteria:**
+
 - [ ] System checks for existing lead by email before creating
 - [ ] If duplicate found within 7 days, updates existing lead
 - [ ] If duplicate found after 7 days, creates new lead (new inquiry)
@@ -274,6 +311,7 @@ POST /webhooks/facebook
 - [ ] Dashboard shows "duplicate" indicator
 
 **Implementation Logic:**
+
 ```python
 def create_or_update_lead(data, dealership_id):
     # Check for existing lead by email
@@ -298,13 +336,16 @@ def create_or_update_lead(data, dealership_id):
 ---
 
 ### Epic 3: AI Auto-Response System
+
 **Business Value:** Respond to every lead within 90 seconds, 24/7
 
 #### US-3.1: Claude API Integration
+
 **Priority:** MUST-HAVE
 **Story:** As the system, I want to generate high-quality Norwegian responses to customer inquiries using AI.
 
 **Acceptance Criteria:**
+
 - [ ] API key securely stored in environment variables
 - [ ] System calls Claude API with lead context
 - [ ] Responses are in Norwegian
@@ -314,6 +355,7 @@ def create_or_update_lead(data, dealership_id):
 - [ ] Response generation takes < 30 seconds
 
 **Prompt Engineering:**
+
 ```python
 SYSTEM_PROMPT = """
 Du er en hjelpsom kundeservicerepresentant for {dealership_name},
@@ -343,6 +385,7 @@ Generer et venlig svar som:
 ```
 
 **Implementation Steps:**
+
 1. Install Anthropic Python SDK
 2. Create `ai_service.py` module
 3. Implement `generate_response()` function
@@ -353,6 +396,7 @@ Generer et venlig svar som:
 8. Handle errors (API down, rate limits, timeouts)
 
 **External Integration:**
+
 - Claude API: `claude-3-5-sonnet-20241022` model
 - Max tokens: 500 (keep responses concise)
 - Temperature: 0.7 (balanced creativity)
@@ -363,10 +407,12 @@ Generer et venlig svar som:
 ---
 
 #### US-3.2: Email Sending System
+
 **Priority:** MUST-HAVE
 **Story:** As the system, I want to send AI-generated responses to customers via email automatically.
 
 **Acceptance Criteria:**
+
 - [ ] System sends emails using Resend or SendGrid
 - [ ] Emails are branded with dealership name and logo
 - [ ] Emails include dealership contact information
@@ -376,41 +422,43 @@ Generer et venlig svar som:
 - [ ] Unsubscribe link included (GDPR compliance)
 
 **Email Template:**
+
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>{dealership_name} - Svar på din henvendelse</title>
-</head>
-<body>
-  <div style="max-width: 600px; margin: 0 auto; font-family: Arial;">
-    <div style="background: #1a73e8; color: white; padding: 20px;">
-      <h1>{dealership_name}</h1>
+  <head>
+    <meta charset="utf-8" />
+    <title>{dealership_name} - Svar på din henvendelse</title>
+  </head>
+  <body>
+    <div style="max-width: 600px; margin: 0 auto; font-family: Arial;">
+      <div style="background: #1a73e8; color: white; padding: 20px;">
+        <h1>{dealership_name}</h1>
+      </div>
+
+      <div style="padding: 20px;">
+        <p>Hei {customer_name},</p>
+
+        <p>{ai_response}</p>
+
+        <p>
+          Med vennlig hilsen,<br />
+          {dealership_name}<br />
+          Telefon: {dealership_phone}<br />
+          E-post: {dealership_email}
+        </p>
+      </div>
+
+      <div style="background: #f5f5f5; padding: 10px; font-size: 12px;">
+        <a href="{unsubscribe_url}">Avmeld nyhetsbrev</a>
+      </div>
     </div>
-
-    <div style="padding: 20px;">
-      <p>Hei {customer_name},</p>
-
-      <p>{ai_response}</p>
-
-      <p>
-        Med vennlig hilsen,<br>
-        {dealership_name}<br>
-        Telefon: {dealership_phone}<br>
-        E-post: {dealership_email}
-      </p>
-    </div>
-
-    <div style="background: #f5f5f5; padding: 10px; font-size: 12px;">
-      <a href="{unsubscribe_url}">Avmeld nyhetsbrev</a>
-    </div>
-  </div>
-</body>
+  </body>
 </html>
 ```
 
 **Implementation Steps:**
+
 1. Sign up for Resend.com (or SendGrid)
 2. Verify domain for email sending
 3. Create email templates
@@ -420,6 +468,7 @@ Generer et venlig svar som:
 7. Store email status in database
 
 **External Integration:**
+
 - Resend API: Simple REST API
 - Rate limits: 100 emails/day (free tier), upgrade as needed
 - Deliverability: Monitor bounce rate, maintain < 5%
@@ -429,10 +478,12 @@ Generer et venlig svar som:
 ---
 
 #### US-3.3: SMS Notification to Sales Rep
+
 **Priority:** SHOULD-HAVE
 **Story:** As a sales rep, I want to receive an SMS when a hot lead arrives so I can follow up immediately.
 
 **Acceptance Criteria:**
+
 - [ ] Sales rep receives SMS within 2 minutes of new lead
 - [ ] SMS includes: customer name, vehicle interest, urgency indicator
 - [ ] SMS includes link to lead in dashboard
@@ -441,6 +492,7 @@ Generer et venlig svar som:
 - [ ] System respects Norwegian SMS regulations
 
 **SMS Template:**
+
 ```
 URGENT: Ny lead fra {customer_name}
 Interessert i: {vehicle_interest}
@@ -450,6 +502,7 @@ Se detaljer: {dashboard_link}
 ```
 
 **Implementation Steps:**
+
 1. Sign up for Twilio (or similar SMS provider)
 2. Purchase Norwegian phone number
 3. Implement `send_sms()` function
@@ -458,6 +511,7 @@ Se detaljer: {dashboard_link}
 6. Add SMS preferences to user settings
 
 **External Integration:**
+
 - Twilio API
 - Cost: ~1 NOK per SMS
 - Rate limits: Monitor usage, alert if approaching limit
@@ -467,10 +521,12 @@ Se detaljer: {dashboard_link}
 ---
 
 #### US-3.4: Auto-Response Workflow Orchestration
+
 **Priority:** MUST-HAVE
 **Story:** As the system, I want to automatically orchestrate the entire response flow when a new lead arrives.
 
 **Acceptance Criteria:**
+
 - [ ] New lead triggers auto-response workflow
 - [ ] Workflow generates AI response
 - [ ] Workflow sends email to customer
@@ -481,6 +537,7 @@ Se detaljer: {dashboard_link}
 - [ ] Workflow logs all steps for debugging
 
 **Workflow Logic:**
+
 ```
 1. Lead created in database
 2. Queue "process-new-lead" job
@@ -495,6 +552,7 @@ Se detaljer: {dashboard_link}
 ```
 
 **Implementation Steps:**
+
 1. Set up Redis instance (Upstash or Railway)
 2. Install BullMQ library
 3. Create job queues (ai-response, email-send, sms-send)
@@ -504,6 +562,7 @@ Se detaljer: {dashboard_link}
 7. Add error alerting (Sentry)
 
 **Database Updates:**
+
 ```sql
 -- Add to conversations table
 INSERT INTO conversations (
@@ -537,13 +596,16 @@ WHERE id = {lead_id};
 ---
 
 ### Epic 4: Dashboard & Lead Management
+
 **Business Value:** Sales reps can manage leads efficiently in one place
 
 #### US-4.1: Lead Inbox View
+
 **Priority:** MUST-HAVE
 **Story:** As a sales rep, I want to see all my dealership's leads in one place so I can prioritize my work.
 
 **Acceptance Criteria:**
+
 - [ ] Page displays all leads for dealership
 - [ ] Leads sorted by created_at (newest first)
 - [ ] Each lead shows: customer name, vehicle interest, source, status, timestamp
@@ -555,6 +617,7 @@ WHERE id = {lead_id};
 - [ ] Search by customer name or email
 
 **UI Wireframe:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Norvalt                    [Profile] [Settings] [Logout]   │
@@ -582,6 +645,7 @@ WHERE id = {lead_id};
 ```
 
 **Implementation Steps:**
+
 1. Create Next.js page `/dashboard/leads`
 2. Implement API call to `GET /api/leads`
 3. Display leads in table/card layout
@@ -592,6 +656,7 @@ WHERE id = {lead_id};
 8. Add loading states and error handling
 
 **API Endpoint:**
+
 ```
 GET /api/leads?status=new&source=website&limit=25&offset=0
 
@@ -609,10 +674,12 @@ Response: 200 OK
 ---
 
 #### US-4.2: Lead Detail View
+
 **Priority:** MUST-HAVE
 **Story:** As a sales rep, I want to view a lead's full details and conversation history so I can prepare for my follow-up.
 
 **Acceptance Criteria:**
+
 - [ ] Page displays all lead information
 - [ ] Shows customer profile card (name, email, phone, vehicle interest)
 - [ ] Shows full conversation history (all messages)
@@ -624,6 +691,7 @@ Response: 200 OK
 - [ ] Real-time updates when new messages arrive
 
 **UI Wireframe:**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ← Back to Leads                                            │
@@ -660,6 +728,7 @@ Response: 200 OK
 ```
 
 **Implementation Steps:**
+
 1. Create Next.js page `/dashboard/leads/[id]`
 2. Implement API call to `GET /api/leads/:id`
 3. Display customer profile card
@@ -670,6 +739,7 @@ Response: 200 OK
 8. Set up real-time updates
 
 **API Endpoints:**
+
 ```
 GET /api/leads/:id
 Response: {lead data + conversations}
@@ -686,10 +756,12 @@ Request: {lead_id, message_content, channel}
 ---
 
 #### US-4.3: Manual Lead Creation
+
 **Priority:** SHOULD-HAVE
 **Story:** As a sales rep, I want to manually add leads (e.g., walk-ins, phone calls) so all leads are in one system.
 
 **Acceptance Criteria:**
+
 - [ ] "Add Lead" button in dashboard
 - [ ] Form with fields: name, email, phone, vehicle interest, message, source
 - [ ] Form validation (email format, phone format)
@@ -699,6 +771,7 @@ Request: {lead_id, message_content, channel}
 - [ ] Redirects to lead detail page
 
 **Implementation Steps:**
+
 1. Add "Add Lead" button to leads page
 2. Create modal/page with form
 3. Implement form validation
@@ -711,10 +784,12 @@ Request: {lead_id, message_content, channel}
 ---
 
 #### US-4.4: Lead Status Management
+
 **Priority:** MUST-HAVE
 **Story:** As a sales rep, I want to update lead status as I work through the sales process.
 
 **Acceptance Criteria:**
+
 - [ ] Status dropdown in lead detail page
 - [ ] Status options: new, contacted, qualified, won, lost
 - [ ] Status change updates database
@@ -723,6 +798,7 @@ Request: {lead_id, message_content, channel}
 - [ ] Analytics use status for conversion tracking
 
 **Implementation Steps:**
+
 1. Add status dropdown UI component
 2. Implement `PATCH /api/leads/:id` endpoint
 3. Update lead status in database
@@ -731,6 +807,7 @@ Request: {lead_id, message_content, channel}
 6. Handle errors gracefully
 
 **Database Schema:**
+
 ```sql
 -- Optional: Track status history
 CREATE TABLE lead_status_history (
@@ -748,13 +825,16 @@ CREATE TABLE lead_status_history (
 ---
 
 ### Epic 5: Basic Automation & Analytics
+
 **Business Value:** Automated follow-ups and insights into lead performance
 
 #### US-5.1: Follow-Up Sequences
+
 **Priority:** SHOULD-HAVE
 **Story:** As a sales rep, I want the system to automatically send follow-up messages so leads don't go cold.
 
 **Acceptance Criteria:**
+
 - [ ] System sends Day 3 follow-up if lead status is still "contacted"
 - [ ] System sends Day 7 follow-up if lead status is still "contacted"
 - [ ] Follow-ups are AI-generated and contextual
@@ -762,6 +842,7 @@ CREATE TABLE lead_status_history (
 - [ ] Dashboard shows scheduled follow-ups
 
 **Follow-Up Logic:**
+
 ```
 Day 0: Initial inquiry + AI response
 Day 3: If status = "contacted" → Send follow-up
@@ -770,6 +851,7 @@ Day 7: If no response → Change status to "lost"
 ```
 
 **Implementation Steps:**
+
 1. Create `automation_rules` table
 2. Create scheduled job to check for follow-up triggers
 3. Generate AI follow-up messages
@@ -782,10 +864,12 @@ Day 7: If no response → Change status to "lost"
 ---
 
 #### US-5.2: Basic Analytics Dashboard
+
 **Priority:** SHOULD-HAVE
 **Story:** As a sales manager, I want to see lead metrics so I can track team performance.
 
 **Acceptance Criteria:**
+
 - [ ] Dashboard shows total leads (last 7 days, last 30 days)
 - [ ] Dashboard shows leads by source (pie chart)
 - [ ] Dashboard shows leads by status (bar chart)
@@ -794,6 +878,7 @@ Day 7: If no response → Change status to "lost"
 - [ ] Data refreshes automatically
 
 **Metrics to Track:**
+
 ```
 - Total leads: COUNT(*)
 - By source: COUNT(*) GROUP BY source
@@ -803,6 +888,7 @@ Day 7: If no response → Change status to "lost"
 ```
 
 **Implementation Steps:**
+
 1. Create analytics queries in backend
 2. Create `/api/analytics/summary` endpoint
 3. Build analytics dashboard page
@@ -815,10 +901,12 @@ Day 7: If no response → Change status to "lost"
 ---
 
 #### US-5.3: Basic Inventory Management
+
 **Priority:** SHOULD-HAVE
 **Story:** As a sales manager, I want to add vehicles to inventory so AI can give accurate availability responses.
 
 **Acceptance Criteria:**
+
 - [ ] "Vehicles" page in dashboard
 - [ ] Add/edit/delete vehicles
 - [ ] Fields: make, model, year, price, status (available/sold)
@@ -827,6 +915,7 @@ Day 7: If no response → Change status to "lost"
 - [ ] Dashboard shows vehicle count
 
 **Implementation Steps:**
+
 1. Create `vehicles` CRUD API
 2. Create vehicles management page
 3. Integrate inventory check into AI prompt
@@ -834,6 +923,7 @@ Day 7: If no response → Change status to "lost"
 5. Test AI responses with/without inventory
 
 **Why It's Important:**
+
 - Without inventory, AI says "I'll check if we have that" (weak response)
 - With inventory, AI says "Yes, we have Model 3 in stock for 389,000 NOK" (strong response)
 
@@ -902,6 +992,7 @@ Day 7: If no response → Change status to "lost"
 ```
 
 **Implementation:**
+
 ```python
 # FastAPI middleware
 from clerk import Clerk
@@ -1278,6 +1369,7 @@ async def process_new_lead(job):
 ### Security Requirements Checklist
 
 #### Data Protection
+
 - [ ] All passwords hashed with bcrypt (handled by Clerk)
 - [ ] All sensitive data encrypted at rest (Supabase default)
 - [ ] HTTPS only for all API communication
@@ -1286,6 +1378,7 @@ async def process_new_lead(job):
 - [ ] Row-level security enforced
 
 #### API Security
+
 - [ ] JWT-based authentication (Clerk)
 - [ ] Rate limiting on public endpoints (10 req/min)
 - [ ] Webhook signature verification (Facebook, email providers)
@@ -1295,6 +1388,7 @@ async def process_new_lead(job):
 - [ ] CORS configured properly
 
 #### GDPR Compliance
+
 - [ ] Data residency in EU (Supabase EU region)
 - [ ] Privacy policy and terms of service
 - [ ] Cookie consent banner
@@ -1304,6 +1398,7 @@ async def process_new_lead(job):
 - [ ] User consent tracking
 
 #### Monitoring & Alerts
+
 - [ ] Error tracking (Sentry integration)
 - [ ] Uptime monitoring (UptimeRobot or similar)
 - [ ] API performance monitoring
@@ -1319,6 +1414,7 @@ async def process_new_lead(job):
 ### Week 3 (Nov 4-10): Backend Foundation
 
 **Day 1-2: Project Setup**
+
 - [x] Initialize Git repositories (norvalt-backend, norvalt-frontend)
 - [x] Initialize FastAPI project structure
 - [ ] Set up virtual environment and dependencies
@@ -1328,6 +1424,7 @@ async def process_new_lead(job):
 - [ ] Set up development environment variables
 
 **Dependencies:**
+
 ```bash
 # Backend
 pip install fastapi uvicorn sqlalchemy psycopg2-binary pydantic python-jose clerk-backend-api anthropic resend twilio redis bullmq sentry-sdk
@@ -1339,6 +1436,7 @@ npm install @clerk/nextjs recharts date-fns
 ```
 
 **Day 3: Database Setup**
+
 - [x] Create Supabase project
 - [x] Run database migrations (create all tables)
 - [x] Set up RLS policies
@@ -1346,13 +1444,15 @@ npm install @clerk/nextjs recharts date-fns
 - [x] Test database connections
 
 **Day 4-5: Core API**
-- [ ] Implement CRUD endpoints for leads
-- [ ] Implement authentication middleware
-- [ ] Set up API documentation (Swagger)
-- [ ] Write integration tests
+
+- [x] Implement CRUD endpoints for leads
+- [x] Implement authentication middleware
+- [x] Set up API documentation (Swagger)
+- [x] Write integration tests
 - [ ] Deploy to Railway/Render staging
 
 **Success Checkpoint:**
+
 - Can create a lead via API (POST /api/leads)
 - Can retrieve leads via API (GET /api/leads)
 - Authentication works (JWT validation)
@@ -1363,13 +1463,15 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 4 (Nov 11-17): Authentication & Frontend
 
 **Day 1-2: Clerk Integration**
-- [ ] Create Clerk application
-- [ ] Configure organizations (dealerships)
-- [ ] Integrate Clerk in Next.js frontend
-- [ ] Implement sign-up/login pages
-- [ ] Test organization creation
+
+- [x] Create Clerk application
+- [x] Configure organizations (dealerships)
+- [x] Integrate Clerk in Next.js frontend
+- [x] Implement sign-up/login pages
+- [x] Test organization creation
 
 **Day 3-4: Dashboard Foundation**
+
 - [ ] Create dashboard layout (nav, sidebar)
 - [ ] Create leads list page
 - [ ] Fetch leads from API
@@ -1377,6 +1479,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Add basic styling
 
 **Day 5: Testing & Deployment**
+
 - [ ] Create 2 test dealership accounts
 - [ ] Verify data isolation
 - [ ] Test authentication flow end-to-end
@@ -1384,6 +1487,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Fix any critical bugs
 
 **Success Checkpoint:**
+
 - Can sign up and log in
 - Dashboard displays leads from API
 - Data properly isolated between test accounts
@@ -1394,6 +1498,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 5 (Nov 18-24): Lead Capture - Website & Email
 
 **Day 1-2: Website Form Webhook**
+
 - [ ] Implement `/webhooks/form/:dealership_id` endpoint
 - [ ] Add request validation (Pydantic model)
 - [ ] Implement duplicate detection
@@ -1402,6 +1507,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Generate embed code for dealership websites
 
 **Day 3-5: Email Monitoring**
+
 - [ ] Set up test email account (Gmail or similar)
 - [ ] Implement IMAP connection
 - [ ] Create background worker (polls every 60s)
@@ -1413,6 +1519,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test with real importer emails
 
 **Success Checkpoint:**
+
 - Website form webhook creates leads successfully
 - Email monitor detects and processes importer emails
 - Both sources create properly formatted leads in database
@@ -1423,6 +1530,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 6 (Nov 25 - Dec 1): Lead Capture - Facebook & Dashboard Updates
 
 **Day 1-3: Facebook Integration**
+
 - [ ] Create Facebook App in Meta Business Suite
 - [ ] Implement webhook verification (GET request)
 - [ ] Implement webhook receiver (POST request)
@@ -1432,6 +1540,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test with test lead from Facebook
 
 **Day 4-5: Dashboard Improvements**
+
 - [ ] Add source filter (website, email, facebook)
 - [ ] Add status filter
 - [ ] Add date range filter
@@ -1440,6 +1549,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Style improvements
 
 **Success Checkpoint:**
+
 - All three lead sources (website, email, Facebook) working
 - Dashboard displays leads from all sources
 - Filters and search work correctly
@@ -1450,6 +1560,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 7 (Dec 2-8): AI Engine - Foundation
 
 **Day 1-2: Redis & Job Queue**
+
 - [ ] Set up Redis instance (Upstash)
 - [ ] Install and configure BullMQ
 - [ ] Create job queues (ai-response, email-send, sms-send)
@@ -1457,6 +1568,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test queue with dummy jobs
 
 **Day 3-5: Claude API Integration**
+
 - [ ] Get Claude API key
 - [ ] Implement `ai_service.py` module
 - [ ] Write system prompt for Norwegian responses
@@ -1467,6 +1579,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Handle API errors gracefully
 
 **Success Checkpoint:**
+
 - Job queue processes jobs successfully
 - Claude API returns quality Norwegian responses
 - Responses are contextually relevant to vehicle interest
@@ -1477,6 +1590,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 8 (Dec 9-15): AI Engine - Delivery
 
 **Day 1-2: Email Sending**
+
 - [ ] Sign up for Resend.com
 - [ ] Verify domain
 - [ ] Create email templates (HTML + plain text)
@@ -1486,6 +1600,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Handle bounce notifications
 
 **Day 3-4: SMS Notifications**
+
 - [ ] Sign up for Twilio
 - [ ] Purchase Norwegian phone number
 - [ ] Implement `send_sms()` function
@@ -1494,6 +1609,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Add cost tracking
 
 **Day 5: Workflow Orchestration**
+
 - [ ] Implement full auto-response workflow
 - [ ] New lead → AI response → Email + SMS
 - [ ] Update lead status after response
@@ -1502,6 +1618,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Measure response time (must be < 90s)
 
 **Success Checkpoint:**
+
 - New leads trigger automatic AI responses
 - Emails delivered successfully
 - SMS notifications sent to sales reps
@@ -1513,6 +1630,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 9 (Dec 16-22): Dashboard Enhancements
 
 **Day 1-2: Lead Detail Page**
+
 - [ ] Create lead detail page UI
 - [ ] Display customer profile card
 - [ ] Display full conversation history
@@ -1522,6 +1640,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Add real-time updates
 
 **Day 3-4: Conversation Management**
+
 - [ ] Implement "Take Over" button (disable AI)
 - [ ] Add manual email/SMS reply
 - [ ] Add internal notes functionality
@@ -1529,12 +1648,14 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test conversation flow
 
 **Day 5: Real-Time Updates**
+
 - [ ] Set up WebSocket or polling for new leads
 - [ ] New leads appear in inbox automatically
 - [ ] New messages appear in conversation view
 - [ ] Test with multiple users
 
 **Success Checkpoint:**
+
 - Lead detail page shows all information
 - Sales reps can manually reply to leads
 - Conversation history is clear and complete
@@ -1545,6 +1666,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 10 (Dec 23-29): Automation & Inventory
 
 **Day 1-2: Follow-Up Sequences**
+
 - [ ] Create `automation_rules` table
 - [ ] Implement Day 3 follow-up logic
 - [ ] Implement Day 7 follow-up logic
@@ -1553,6 +1675,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Add UI to view scheduled follow-ups
 
 **Day 3-4: Basic Inventory**
+
 - [ ] Implement vehicles CRUD API
 - [ ] Create vehicles management page
 - [ ] Add/edit/delete vehicles UI
@@ -1560,12 +1683,14 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test AI responses with inventory data
 
 **Day 5: Lead Status Workflow**
+
 - [ ] Implement status change API
 - [ ] Track status history
 - [ ] Update dashboard filters
 - [ ] Test status transitions
 
 **Success Checkpoint:**
+
 - Follow-up sequences send messages on schedule
 - Inventory management works
 - AI mentions inventory availability
@@ -1576,6 +1701,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 11 (Dec 30 - Jan 5): Analytics & Settings
 
 **Day 1-2: Analytics Dashboard**
+
 - [ ] Implement analytics queries
 - [ ] Create `/api/analytics/summary` endpoint
 - [ ] Build analytics page UI
@@ -1584,6 +1710,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Add date range selector
 
 **Day 3-4: Settings & Configuration**
+
 - [ ] Create settings page
 - [ ] Dealership profile settings
 - [ ] Team management (invite users)
@@ -1592,12 +1719,14 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test all settings
 
 **Day 5: Error Handling & Logging**
+
 - [ ] Integrate Sentry for error tracking
 - [ ] Add comprehensive logging
 - [ ] Test failure scenarios
 - [ ] Implement error notifications
 
 **Success Checkpoint:**
+
 - Analytics provide useful insights
 - Settings allow customization
 - Errors are caught and logged
@@ -1608,6 +1737,7 @@ npm install @clerk/nextjs recharts date-fns
 ### Week 12 (Jan 6-12): Production Readiness & Polish
 
 **Day 1-2: Security Audit**
+
 - [ ] Review all endpoints for SQL injection vulnerabilities
 - [ ] Test XSS protection
 - [ ] Review CORS configuration
@@ -1617,6 +1747,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Test data isolation thoroughly
 
 **Day 3: Performance Optimization**
+
 - [ ] Add database indexes
 - [ ] Optimize slow queries
 - [ ] Implement API caching where appropriate
@@ -1625,6 +1756,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Load testing (100 concurrent users)
 
 **Day 4: Documentation**
+
 - [ ] Write user guide
 - [ ] Write admin guide
 - [ ] Document API endpoints
@@ -1632,6 +1764,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Record demo video
 
 **Day 5: Final Testing & Deployment**
+
 - [ ] End-to-end testing
 - [ ] User acceptance testing
 - [ ] Fix all critical bugs
@@ -1640,6 +1773,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Create demo account
 
 **Success Checkpoint:**
+
 - MVP is production-ready
 - Zero critical bugs
 - Documentation complete
@@ -1655,30 +1789,34 @@ npm install @clerk/nextjs recharts date-fns
 ### Phase 1: Foundation (Week 3-4)
 
 **Week 3 Deliverables:**
-- [ ] Project repositories created
-- [ ] Database schema deployed
-- [ ] Core API endpoints functional
-- [ ] API documentation available
-- [ ] Backend deployed to staging
+
+- [x] Project repositories created
+- [x] Database schema deployed
+- [x] Core API endpoints functional
+- [x] API documentation available
+- [x] Backend deployed to staging
 
 **Week 4 Deliverables:**
-- [ ] Clerk authentication integrated
-- [ ] Multi-tenant data isolation working
-- [ ] Dashboard displays leads
-- [ ] Frontend deployed to staging
-- [ ] 2 test dealerships created
 
-**Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
+- [x] Clerk authentication integrated
+- [x] Multi-tenant data isolation working
+- [x] Dashboard displays leads
+- [x] Frontend deployed to staging
+- [x] 2 test dealerships created
+- [x] **Clerk webhook provisioning implemented** - Automatic user/dealership creation
 
-**Blockers:** _____________________________________
+**Status:** [x] Completed
 
-**Notes:** _____________________________________
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
+
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
 ### Phase 2: Lead Capture (Week 5-6)
 
 **Week 5 Deliverables:**
+
 - [ ] Website form webhook functional
 - [ ] Email monitoring system working
 - [ ] Toyota.no emails parsed correctly
@@ -1686,6 +1824,7 @@ npm install @clerk/nextjs recharts date-fns
 - [ ] Duplicate detection implemented
 
 **Week 6 Deliverables:**
+
 - [ ] Facebook webhook verified
 - [ ] Facebook leads captured successfully
 - [ ] Dashboard shows leads from all sources
@@ -1694,27 +1833,30 @@ npm install @clerk/nextjs recharts date-fns
 
 **Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
 
-**Blockers:** _____________________________________
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** _____________________________________
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
 ### Phase 3: AI Engine (Week 7-9)
 
 **Week 7 Deliverables:**
+
 - [ ] Redis and BullMQ configured
 - [ ] Claude API integrated
 - [ ] AI generates quality Norwegian responses
 - [ ] Job queue processes tasks
 
 **Week 8 Deliverables:**
+
 - [ ] Email sending system functional
 - [ ] SMS notification system working
 - [ ] Auto-response workflow complete
 - [ ] Response time < 90 seconds
 
 **Week 9 Deliverables:**
+
 - [ ] Lead detail page functional
 - [ ] Conversation history displayed
 - [ ] Manual reply working
@@ -1723,27 +1865,30 @@ npm install @clerk/nextjs recharts date-fns
 
 **Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
 
-**Blockers:** _____________________________________
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** _____________________________________
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
 ### Phase 4: Polish (Week 10-12)
 
 **Week 10 Deliverables:**
+
 - [ ] Follow-up sequences working
 - [ ] Inventory management functional
 - [ ] AI uses inventory data
 - [ ] Status workflow complete
 
 **Week 11 Deliverables:**
+
 - [ ] Analytics dashboard functional
 - [ ] Settings page complete
 - [ ] Team management working
 - [ ] Error tracking integrated
 
 **Week 12 Deliverables:**
+
 - [ ] Security audit passed
 - [ ] Performance optimized
 - [ ] Documentation complete
@@ -1752,16 +1897,18 @@ npm install @clerk/nextjs recharts date-fns
 
 **Status:** [ ] Not Started | [ ] In Progress | [ ] Completed | [ ] Blocked
 
-**Blockers:** _____________________________________
+**Blockers:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
-**Notes:** _____________________________________
+**Notes:** **\*\*\*\***\*\***\*\*\*\***\_**\*\*\*\***\*\***\*\*\*\***
 
 ---
 
 ## Definition of Done
 
 ### Feature-Level DoD
+
 A feature is considered DONE when:
+
 - [ ] Code is written and committed to Git
 - [ ] Unit tests written and passing (backend only)
 - [ ] Integration tests written and passing
@@ -1773,7 +1920,9 @@ A feature is considered DONE when:
 - [ ] Acceptance criteria met
 
 ### Epic-Level DoD
+
 An epic is considered DONE when:
+
 - [ ] All user stories completed
 - [ ] End-to-end testing passed
 - [ ] Performance benchmarks met
@@ -1782,7 +1931,9 @@ An epic is considered DONE when:
 - [ ] Validated with real users (if applicable)
 
 ### MVP-Level DoD
+
 The MVP is considered DONE when:
+
 - [ ] All core user stories completed
 - [ ] All technical specifications met
 - [ ] Security requirements checklist passed
@@ -1800,6 +1951,7 @@ The MVP is considered DONE when:
 ### Testing Requirements
 
 **Unit Tests (Backend):**
+
 - [ ] Test lead creation with valid data
 - [ ] Test lead creation with invalid data
 - [ ] Test duplicate detection logic
@@ -1809,6 +1961,7 @@ The MVP is considered DONE when:
 - [ ] Target: 70% code coverage
 
 **Integration Tests:**
+
 - [ ] Test full lead capture flow (webhook → DB → AI → email)
 - [ ] Test multi-tenant data isolation
 - [ ] Test Facebook webhook verification
@@ -1817,6 +1970,7 @@ The MVP is considered DONE when:
 - [ ] Test follow-up sequence scheduling
 
 **End-to-End Tests (Frontend):**
+
 - [ ] Test user signup and login
 - [ ] Test lead list page
 - [ ] Test lead detail page
@@ -1825,6 +1979,7 @@ The MVP is considered DONE when:
 - [ ] Test status change
 
 **Performance Tests:**
+
 - [ ] API response time < 200ms (p95)
 - [ ] Lead capture to AI response < 90 seconds
 - [ ] Dashboard load time < 2 seconds
@@ -1832,6 +1987,7 @@ The MVP is considered DONE when:
 - [ ] Load test: 100 concurrent users
 
 **Security Tests:**
+
 - [ ] Test SQL injection prevention
 - [ ] Test XSS prevention
 - [ ] Test authentication bypass attempts
@@ -1843,6 +1999,7 @@ The MVP is considered DONE when:
 ### Performance Benchmarks
 
 **Must Achieve:**
+
 - Lead capture to AI response: **< 90 seconds** (target: < 60 seconds)
 - API response time (p95): **< 200ms**
 - Dashboard load time: **< 2 seconds**
@@ -1850,6 +2007,7 @@ The MVP is considered DONE when:
 - Platform uptime: **> 99.5%**
 
 **Monitoring:**
+
 - Set up alerts for response time > 90 seconds
 - Set up alerts for API errors > 1%
 - Set up alerts for failed background jobs
@@ -1862,6 +2020,7 @@ The MVP is considered DONE when:
 ### Technical Risks
 
 **Risk 1: AI API Rate Limits**
+
 - **Likelihood:** Medium
 - **Impact:** High (blocks core functionality)
 - **Mitigation:**
@@ -1871,6 +2030,7 @@ The MVP is considered DONE when:
   - Budget for higher API tier if needed
 
 **Risk 2: Email Deliverability Issues**
+
 - **Likelihood:** Medium
 - **Impact:** High (customers don't receive responses)
 - **Mitigation:**
@@ -1880,6 +2040,7 @@ The MVP is considered DONE when:
   - Have SMS as backup channel
 
 **Risk 3: Webhook Reliability**
+
 - **Likelihood:** Medium
 - **Impact:** Medium (leads not captured)
 - **Mitigation:**
@@ -1889,6 +2050,7 @@ The MVP is considered DONE when:
   - Provide manual upload as backup
 
 **Risk 4: Multi-Tenant Data Leaks**
+
 - **Likelihood:** Low
 - **Impact:** Critical (security breach, legal issues)
 - **Mitigation:**
@@ -1898,6 +2060,7 @@ The MVP is considered DONE when:
   - Penetration testing before launch
 
 **Risk 5: Third-Party API Changes**
+
 - **Likelihood:** Low
 - **Impact:** High (integration breaks)
 - **Mitigation:**
@@ -1909,6 +2072,7 @@ The MVP is considered DONE when:
 ### Project Risks
 
 **Risk 6: MVP Takes Longer Than 10 Weeks**
+
 - **Likelihood:** Medium
 - **Impact:** High (delays customer acquisition)
 - **Mitigation:**
@@ -1918,6 +2082,7 @@ The MVP is considered DONE when:
   - Use AI coding assistants aggressively
 
 **Risk 7: Loss of Motivation**
+
 - **Likelihood:** Medium (based on founder's pattern)
 - **Impact:** Critical (project fails)
 - **Mitigation:**
@@ -1928,6 +2093,7 @@ The MVP is considered DONE when:
   - No other projects until March
 
 **Risk 8: First Customers Don't Convert**
+
 - **Likelihood:** Low (warm network)
 - **Impact:** High (delays profitability)
 - **Mitigation:**
@@ -1941,6 +2107,7 @@ The MVP is considered DONE when:
 ## Success Criteria (Recap)
 
 ### Technical Success
+
 - [ ] All three lead sources capture leads successfully (website, email, Facebook)
 - [ ] AI responds to 95%+ of new leads within 90 seconds
 - [ ] Multi-tenant architecture with proper data isolation
@@ -1950,12 +2117,14 @@ The MVP is considered DONE when:
 - [ ] All API endpoints documented and functional
 
 ### Business Success
+
 - [ ] Week 12 (Jan 12): MVP is production-ready
 - [ ] Week 14 (Jan 26): First paying customer signed
 - [ ] Week 16 (Feb 9): 5 paying customers, no churn
 - [ ] Week 20 (Mar 9): 8-10 paying customers, profitable (36-45K NOK MRR)
 
 ### User Success
+
 - [ ] Sales reps can view all leads in one place
 - [ ] Sales reps receive instant notifications for hot leads
 - [ ] Sales reps can manage conversations from dashboard
@@ -1968,7 +2137,9 @@ The MVP is considered DONE when:
 ## Next Actions
 
 ### This Week (Week 3: Nov 4-10)
+
 **Critical Path:**
+
 1. Initialize both repositories (backend + frontend)
 2. Set up database on Supabase
 3. Implement core lead API endpoints
@@ -1987,6 +2158,7 @@ The MVP is considered DONE when:
 Every feature in this PRD is a step toward the farm in the Norwegian countryside. Every API endpoint deployed is another brick in the foundation. Every lead captured is proof this works.
 
 **The Stakes:**
+
 - 8-10 customers by March = 36-45K NOK/month
 - That's 432-540K NOK/year net profit
 - That's enough to buy land, plan the farm, achieve financial freedom
@@ -2004,6 +2176,7 @@ When things get hard, remember why you're building this. Every dealership signed
 **Document Status:** ACTIVE
 **Next Review:** End of Week 4 (November 17, 2025)
 **Version History:**
+
 - v1.0 (Nov 4, 2025): Initial PRD created, all MVP features defined
 
 ---
