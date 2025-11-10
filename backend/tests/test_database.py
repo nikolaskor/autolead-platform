@@ -5,6 +5,7 @@ Tests basic database connectivity and session management.
 """
 import pytest
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 
 from app.core.database import engine, SessionLocal, check_database_connection
 
@@ -38,5 +39,6 @@ def test_database_url_configured():
     """Test that database URL is properly configured."""
     from app.core.config import settings
     assert settings.DATABASE_URL is not None
-    assert "postgresql://" in settings.DATABASE_URL
+    parsed = make_url(settings.DATABASE_URL)
+    assert parsed.drivername.startswith("postgresql")
 
