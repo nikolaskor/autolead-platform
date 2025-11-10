@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.core.database import check_database_connection
 from app.core.exceptions import NotFoundException, UnauthorizedException, ForbiddenException
 from app.api.v1.router import api_router
-from app.api.webhooks import clerk_webhook_router
+from app.api.webhooks import clerk_webhook_router, form_webhook_router
 
 # Configure logging
 logging.basicConfig(
@@ -118,3 +118,4 @@ app.include_router(api_router, prefix="/api/v1")
 
 # Webhook endpoints
 app.include_router(clerk_webhook_router)
+app.include_router(form_webhook_router)

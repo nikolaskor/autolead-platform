@@ -3,7 +3,7 @@ Main router for API v1.
 Combines all endpoint routers.
 """
 from fastapi import APIRouter
-from .endpoints import leads, conversations
+from .endpoints import leads, conversations, embed
 
 # Create main v1 router
 api_router = APIRouter()
@@ -17,5 +17,10 @@ api_router.include_router(
 api_router.include_router(
     conversations.router,
     tags=["conversations"]
+)
+
+api_router.include_router(
+    embed.router,
+    tags=["embed"]
 )
 
