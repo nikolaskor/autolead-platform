@@ -34,8 +34,7 @@ async def form_webhook(
 
     **Duplicate Detection:**
     - If a lead with the same email exists within the last 5 minutes, updates it
-    - If a lead with the same email exists within the last 7 days, creates new lead
-    - After 7 days, always creates a new lead (new inquiry)
+    - Otherwise, always creates a new lead (new inquiry)
 
     **Edge Cases Handled:**
     - Invalid dealership_id: 404 Not Found

@@ -38,8 +38,8 @@ def get_html_form_code(
         Dictionary with HTML code and instructions
     """
 
-    # Use configured API URL or fall back to settings
-    api_base_url = settings.API_URL if hasattr(settings, 'API_URL') else "http://localhost:8000"
+    # Use configured API URL
+    api_base_url = settings.API_URL
 
     code = generate_html_form(
         dealership_id=str(dealership.id),
@@ -79,7 +79,7 @@ def get_javascript_snippet(
         Dictionary with JavaScript code and instructions
     """
 
-    api_base_url = settings.API_URL if hasattr(settings, 'API_URL') else "http://localhost:8000"
+    api_base_url = settings.API_URL
 
     code = generate_javascript_snippet(
         dealership_id=str(dealership.id),
@@ -121,7 +121,7 @@ def get_embed_documentation(
         Complete documentation with all embed options and instructions
     """
 
-    api_base_url = settings.API_URL if hasattr(settings, 'API_URL') else "http://localhost:8000"
+    api_base_url = settings.API_URL
 
     docs = generate_embed_code_docs(
         dealership_id=str(dealership.id),
