@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Norvalt API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    API_URL: str = "http://localhost:8000"
     
     model_config = SettingsConfigDict(
         env_file=".env",
