@@ -7,9 +7,9 @@ Handles:
 - Email processing triggers
 """
 import json
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Form, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from ....core.database import get_db
@@ -53,7 +53,7 @@ async def receive_email_webhook(
     # For now, we'll look up by email_forwarding_address
     dealership = db.query(Dealership).filter(
         Dealership.email_forwarding_address == to,
-        Dealership.email_integration_enabled == True
+        Dealership.email_integration_enabled.is_(True)
     ).first()
 
     if not dealership:
@@ -76,7 +76,7 @@ async def receive_email_webhook(
         # Fallback: generate from from+to+subject+timestamp
         import hashlib
         import datetime
-        unique_str = f"{from_}{to}{subject}{datetime.datetime.utcnow().isoformat()}"
+        unique_str = f"{from_}{to}{subject}{datetime.datetime.now(datetime.UTC).isoformat()}"
         message_id = f"<{hashlib.md5(unique_str.encode()).hexdigest()}@autolead.no>"
 
     # Check if email already exists (deduplication)

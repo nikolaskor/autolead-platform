@@ -4,7 +4,7 @@ Email model for storing and processing incoming emails.
 Emails are received via webhook (SendGrid Inbound Parse), classified by AI,
 and potentially converted to leads.
 """
-from sqlalchemy import Column, String, DateTime, ForeignKey, func, Index, Integer, Float, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, func, Index, Integer, Float, Text, desc
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
@@ -90,8 +90,8 @@ class Email(Base):
 
     # Indexes for common queries
     __table_args__ = (
-        Index("idx_emails_status_received", processing_status, received_at.desc()),
-        Index("idx_emails_dealership_received", dealership_id, received_at.desc()),
+        Index("idx_emails_status_received", processing_status, desc(received_at)),
+        Index("idx_emails_dealership_received", dealership_id, desc(received_at)),
         Index("idx_emails_classification", classification, classification_confidence),
     )
 
