@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from typing import Any, Dict, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from svix.webhooks import Webhook, WebhookVerificationError
 
@@ -19,8 +21,33 @@ from ...models.user import User
 
 logger = logging.getLogger(__name__)
 
+# Email validation regex (matches database constraint)
+EMAIL_REGEX = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$')
+
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
+
+
+def _validate_and_normalize_email(email: str | None, clerk_org_id: str | None = None) -> str:
+    """Validate email format and generate valid placeholder if needed.
+    
+    Args:
+        email: Email address to validate
+        clerk_org_id: Optional Clerk organization ID for generating placeholder
+        
+    Returns:
+        Valid email address (either original or generated placeholder)
+    """
+    if email and EMAIL_REGEX.match(email):
+        return email
+    
+    # Generate valid placeholder email if invalid or missing
+    if clerk_org_id:
+        # Use org ID to create unique placeholder
+        org_slug = clerk_org_id.replace("org_", "").lower()[:20]  # Limit length
+        return f"org-{org_slug}@placeholder.norvalt.no"
+    
+    return "unknown@placeholder.norvalt.no"
 
 
 @router.post("/clerk", status_code=status.HTTP_200_OK)
@@ -72,10 +99,55 @@ async def clerk_webhook(
         # Re-raise FastAPI exceptions so status codes propagate
         db.rollback()
         raise
+    except IntegrityError as exc:
+        # Handle database constraint violations
+        db.rollback()
+        error_detail = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
+        
+        # Extract constraint violation details
+        if "CheckViolation" in error_detail or "valid_dealership_email" in error_detail:
+            logger.error(
+                "Email validation failed for webhook event %s: %s",
+                event_type,
+                error_detail
+            )
+            detail_msg = "Invalid email format provided. Email must match standard format (e.g., user@example.com)."
+            if settings.DEBUG:
+                detail_msg += f" Details: {error_detail}"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=detail_msg
+            ) from exc
+        elif "UniqueViolation" in error_detail or "dealerships_email_key" in error_detail:
+            logger.error(
+                "Duplicate email violation for webhook event %s: %s",
+                event_type,
+                error_detail
+            )
+            detail_msg = "A dealership with this email already exists. The webhook may be retrying or the email is already in use."
+            if settings.DEBUG:
+                detail_msg += f" Details: {error_detail}"
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=detail_msg
+            ) from exc
+        else:
+            # Other integrity violations
+            logger.exception("Database integrity error handling webhook event %s", event_type)
+            detail_msg = f"Database constraint violation: {error_detail}"
+            if not settings.DEBUG:
+                detail_msg = "Database constraint violation occurred"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=detail_msg
+            ) from exc
     except Exception as exc:  # noqa: BLE001 - we want to log unexpected errors
         db.rollback()
         logger.exception("Error handling Clerk webhook event %s", event_type)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Webhook handling failed") from exc
+        detail_msg = "Webhook handling failed"
+        if settings.DEBUG:
+            detail_msg += f": {str(exc)}"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail_msg) from exc
 
 
 def _verify_svix_signature(payload: bytes, headers: Dict[str, str]) -> Dict[str, Any]:
@@ -124,7 +196,8 @@ def _handle_organization_created(data: Dict[str, Any], db: Session) -> Dict[str,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing organization ID")
 
     name = data.get("name") or "Unnamed Dealership"
-    email = data.get("primary_contact_email_address") or data.get("slug") or "unknown@example.com"
+    raw_email = data.get("primary_contact_email_address") or data.get("slug")
+    email = _validate_and_normalize_email(raw_email, clerk_org_id)
 
     dealership, created = _ensure_dealership(db, clerk_org_id, name=name, email=email)
 
@@ -148,28 +221,60 @@ def _handle_membership_created(data: Dict[str, Any], db: Session) -> Dict[str, A
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing user ID")
 
     role = data.get("role") or "member"
-    email = public_user.get("identifier")
+    
+    # Try to get user email from multiple sources
+    raw_email = public_user.get("identifier")
+    # Also check email_addresses array if identifier is not available
+    if not raw_email or not EMAIL_REGEX.match(raw_email):
+        email_addresses = public_user.get("email_addresses", [])
+        if email_addresses and len(email_addresses) > 0:
+            # Get the first verified email, or first email if none verified
+            verified_email = next((e.get("email_address") for e in email_addresses if e.get("verification", {}).get("status") == "verified"), None)
+            if verified_email:
+                raw_email = verified_email
+            elif email_addresses[0].get("email_address"):
+                raw_email = email_addresses[0].get("email_address")
+    
     first_name = public_user.get("first_name")
     last_name = public_user.get("last_name")
     full_name = " ".join(filter(None, [first_name, last_name])).strip() or None
 
+    # Determine dealership email:
+    # 1. Use valid user email if available
+    # 2. Otherwise generate placeholder
+    # 3. If dealership exists with placeholder, we'll update it below if we have valid email
+    user_email_valid = raw_email and EMAIL_REGEX.match(raw_email)
+    dealership_email = raw_email if user_email_valid else _validate_and_normalize_email(raw_email, clerk_org_id)
+    
     dealership, created_dealership = _ensure_dealership(
         db,
         clerk_org_id,
         name=organization.get("name"),
-        email=email,
+        email=dealership_email,
     )
+    
+    # If dealership has placeholder email but we now have valid user email, update it
+    if user_email_valid and dealership.email.startswith("org-") and "@placeholder.norvalt.no" in dealership.email:
+        logger.info(
+            "Updating dealership %s email from placeholder %s to user email %s",
+            dealership.id,
+            dealership.email,
+            raw_email
+        )
+        dealership.email = raw_email
 
     user = get_user_from_clerk_id(clerk_user_id, db)
     created_user = False
 
     if not user:
         assigned_role = _determine_role(role, created_dealership, dealership, db)
+        # Use validated email for user, or fallback to placeholder
+        user_email = raw_email if raw_email and EMAIL_REGEX.match(raw_email) else f"user-{clerk_user_id[:20]}@placeholder.norvalt.no"
         user = User(
             id=uuid.uuid4(),
             dealership_id=dealership.id,
             clerk_user_id=clerk_user_id,
-            email=email or "unknown@example.com",
+            email=user_email,
             name=full_name,
             role=assigned_role,
         )
@@ -183,9 +288,9 @@ def _handle_membership_created(data: Dict[str, Any], db: Session) -> Dict[str, A
         desired_role = _determine_role(role, created_dealership, dealership, db)
         if user.role != desired_role:
             user.role = desired_role
-        # Update email/name if provided
-        if email and user.email != email:
-            user.email = email
+        # Update email/name if provided and valid
+        if raw_email and EMAIL_REGEX.match(raw_email) and user.email != raw_email:
+            user.email = raw_email
         if full_name and user.name != full_name:
             user.name = full_name
 
@@ -329,17 +434,43 @@ def _ensure_dealership(
     name: str | None,
     email: str | None,
 ) -> Tuple[Dealership, bool]:
-    """Fetch or create a dealership for the Clerk organization."""
-
+    """Fetch or create a dealership for the Clerk organization.
+    
+    Checks for existing dealership by clerk_org_id first, then by email.
+    If found by email but different org_id, updates the org_id to prevent duplicates.
+    """
+    
+    # First, try to find by clerk_org_id (primary lookup)
     dealership = get_dealership_from_org(clerk_org_id, db)
     created = False
 
+    if dealership is None and email:
+        # If not found by org_id, check if dealership exists with this email
+        existing_by_email = db.query(Dealership).filter(Dealership.email == email).first()
+        if existing_by_email:
+            # Dealership exists with this email but different org_id
+            # Update the org_id to link them (handles org_id changes in Clerk)
+            logger.info(
+                "Found dealership %s by email %s, updating clerk_org_id from %s to %s",
+                existing_by_email.id,
+                email,
+                existing_by_email.clerk_org_id,
+                clerk_org_id
+            )
+            existing_by_email.clerk_org_id = clerk_org_id
+            dealership = existing_by_email
+            # Update name if provided and different
+            if name and dealership.name != name:
+                dealership.name = name
+            return dealership, False
+
     if dealership is None:
+        # Create new dealership
         dealership = Dealership(
             id=uuid.uuid4(),
             clerk_org_id=clerk_org_id,
             name=name or "Unnamed Dealership",
-            email=email or "unknown@example.com",
+            email=email or "unknown@placeholder.norvalt.no",
             subscription_status="active",
             subscription_tier="starter",
         )
@@ -353,8 +484,16 @@ def _ensure_dealership(
             dealership.name = name
             updated = True
         if email and dealership.email != email:
-            dealership.email = email
-            updated = True
+            # Only update email if it's valid and different
+            if EMAIL_REGEX.match(email):
+                dealership.email = email
+                updated = True
+            else:
+                logger.warning(
+                    "Skipping email update for dealership %s: invalid format %s",
+                    dealership.id,
+                    email
+                )
         if updated:
             logger.debug("Updated dealership metadata for Clerk org %s", clerk_org_id)
 
