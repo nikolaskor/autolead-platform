@@ -1499,12 +1499,12 @@ npm install @clerk/nextjs recharts date-fns
 
 **Day 1-2: Website Form Webhook**
 
-- [ ] Implement `/webhooks/form/:dealership_id` endpoint
-- [ ] Add request validation (Pydantic model)
-- [ ] Implement duplicate detection
-- [ ] Create lead in database
-- [ ] Test with Postman/curl
-- [ ] Generate embed code for dealership websites
+- [x] Implement `/webhooks/form/:dealership_id` endpoint
+- [x] Add request validation (Pydantic model)
+- [x] Implement duplicate detection
+- [x] Create lead in database
+- [x] Test with Postman/curl
+- [x] Generate embed code for dealership websites
 
 **Day 3-5: Email Monitoring**
 
