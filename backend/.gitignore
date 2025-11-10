@@ -18,7 +18,6 @@ ENV/
 *.db
 *.sqlite
 *.sqlite3
-test.db
 
 # IDE
 .vscode/

@@ -119,7 +119,7 @@ def enable_email_integration(
         slug = slug[:20]
 
         # Generate random ID (8 characters)
-        random_id = secrets.token_urlsafe(6)  # ~8 chars in base64
+        random_id = secrets.token_urlsafe(6)  # 6 bytes = 8 base64url chars
 
         # Create unique forwarding address
         forwarding_address = f"{slug}-{random_id}@leads.autolead.no"

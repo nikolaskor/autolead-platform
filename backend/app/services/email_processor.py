@@ -8,7 +8,7 @@ This service handles:
 """
 import json
 import re
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Tuple
 from anthropic import Anthropic
 from sqlalchemy.orm import Session
 
@@ -37,6 +37,13 @@ SPAM_KEYWORDS = [
     "lottery",
     "congratulations you've won",
 ]
+
+# Lead score mapping by urgency level
+URGENCY_SCORES = {
+    'high': 70,
+    'medium': 60,
+    'low': 50
+}
 
 
 class EmailProcessor:
@@ -300,7 +307,7 @@ If a field cannot be determined, use null. For email, use the sender's email add
                         customer_phone=lead_data.phone,
                         vehicle_interest=lead_data.car_interest,
                         initial_message=lead_data.inquiry_summary,
-                        lead_score=70 if lead_data.urgency == "high" else 60 if lead_data.urgency == "medium" else 50
+                        lead_score=URGENCY_SCORES.get(lead_data.urgency, 50)
                     )
                     db.add(lead)
                     db.flush()  # Get the lead ID

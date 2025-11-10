@@ -2,7 +2,7 @@
 Dealership model representing car dealership organizations.
 Each dealership is a separate tenant in the multi-tenant system.
 """
-from sqlalchemy import Column, String, DateTime, func, Index, CheckConstraint, Boolean
+from sqlalchemy import Column, String, DateTime, func, CheckConstraint, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
