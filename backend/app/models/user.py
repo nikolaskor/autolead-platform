@@ -36,8 +36,8 @@ class User(Base):
     
     # Notification preferences (JSONB for flexibility)
     notification_preferences = Column(
-        JSONB, 
-        default={"sms": True, "email": True}, 
+        JSONB,
+        default=lambda: {"sms": True, "email": True},
         nullable=False
     )
     
