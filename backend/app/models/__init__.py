@@ -9,6 +9,7 @@ from .dealership import Dealership
 from .user import User
 from .lead import Lead
 from .conversation import Conversation
+from .email import Email
 
 __all__ = [
     "Base",
@@ -16,5 +17,6 @@ __all__ = [
     "User",
     "Lead",
     "Conversation",
+    "Email",
 ]
 

@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     CLERK_PUBLISHABLE_KEY: str
     CLERK_JWKS_URL: Optional[str] = None
     CLERK_WEBHOOK_SECRET: str
-    
+
+    # Anthropic AI (for email classification and lead extraction)
+    ANTHROPIC_API_KEY: Optional[str] = None
+
     # Application
     APP_NAME: str = "Norvalt API"
     APP_VERSION: str = "1.0.0"
