@@ -761,8 +761,11 @@ CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
 - [x] **Event Handlers:**
   - `organization.created` - Creates dealership record automatically
   - `organizationMembership.created` - Creates user and dealership records
+  - `user.deleted` - Deletes user from database when account is deleted in Clerk
+  - `organizationMembership.deleted` - Deletes user when removed from organization
   - Handles role assignment (first user becomes admin)
   - Updates existing records if webhook retries
+  - Idempotent deletion handlers (safe to retry)
 
 - [x] **Signature Verification:**
   - Svix webhook verification using `CLERK_WEBHOOK_SECRET`
@@ -780,8 +783,11 @@ CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
 
 - [x] Created `tests/test_webhooks.py`
   - Tests membership creation provisioning
+  - Tests user deletion when `user.deleted` event received
+  - Tests user deletion when `organizationMembership.deleted` event received
   - Tests idempotency (multiple webhook calls)
   - Tests invalid signature rejection
+  - Tests deletion validation (wrong dealership)
 
 #### 4. Documentation ✅
 

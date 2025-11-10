@@ -90,3 +90,205 @@ def test_invalid_signature_returns_400(client):
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid signature"
 
+
+def test_user_deleted_removes_user_from_database(client, db_session):
+    """Webhook should delete user when user.deleted event is received."""
+    # First create a user
+    from app.models.dealership import Dealership
+    from app.models.user import User
+    import uuid
+
+    dealership = Dealership(
+        id=uuid.uuid4(),
+        clerk_org_id="org_test_delete",
+        name="Test Dealership",
+        email="test@example.com",
+        subscription_status="active",
+        subscription_tier="starter",
+    )
+    db_session.add(dealership)
+    db_session.flush()
+
+    user = User(
+        id=uuid.uuid4(),
+        dealership_id=dealership.id,
+        clerk_user_id="user_test_delete",
+        email="delete@example.com",
+        name="Test User",
+        role="sales_rep",
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    # Verify user exists
+    assert db_session.query(User).filter_by(clerk_user_id="user_test_delete").first() is not None
+
+    # Send deletion event
+    event = {
+        "type": "user.deleted",
+        "data": {
+            "id": "user_test_delete",
+        },
+    }
+
+    with patch("app.api.webhooks.clerk.Webhook.verify", return_value=event):
+        response = client.post("/webhooks/clerk", data="{}", headers=_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processed"
+    assert body["event_type"] == "user.deleted"
+    assert body["deleted_user_id"] is not None
+    assert body["clerk_user_id"] == "user_test_delete"
+
+    # Verify user is deleted
+    assert db_session.query(User).filter_by(clerk_user_id="user_test_delete").first() is None
+
+
+def test_user_deleted_idempotent(client, db_session):
+    """Deleting a non-existent user should be idempotent (no error)."""
+    event = {
+        "type": "user.deleted",
+        "data": {
+            "id": "user_nonexistent",
+        },
+    }
+
+    with patch("app.api.webhooks.clerk.Webhook.verify", return_value=event):
+        response = client.post("/webhooks/clerk", data="{}", headers=_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processed"
+    assert body["deleted_user_id"] is None
+    assert body["message"] == "User not found in database"
+
+
+def test_membership_deleted_removes_user_from_database(client, db_session):
+    """Webhook should delete user when removed from organization."""
+    # First create a user and dealership
+    from app.models.dealership import Dealership
+    from app.models.user import User
+    import uuid
+
+    dealership = Dealership(
+        id=uuid.uuid4(),
+        clerk_org_id="org_test_membership_delete",
+        name="Test Dealership",
+        email="test@example.com",
+        subscription_status="active",
+        subscription_tier="starter",
+    )
+    db_session.add(dealership)
+    db_session.flush()
+
+    user = User(
+        id=uuid.uuid4(),
+        dealership_id=dealership.id,
+        clerk_user_id="user_test_membership_delete",
+        email="membership@example.com",
+        name="Test User",
+        role="sales_rep",
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    # Verify user exists
+    assert (
+        db_session.query(User)
+        .filter_by(clerk_user_id="user_test_membership_delete")
+        .first()
+        is not None
+    )
+
+    # Send membership deletion event
+    event = {
+        "type": "organizationMembership.deleted",
+        "data": {
+            "organization": {
+                "id": "org_test_membership_delete",
+            },
+            "public_user_data": {
+                "user_id": "user_test_membership_delete",
+            },
+        },
+    }
+
+    with patch("app.api.webhooks.clerk.Webhook.verify", return_value=event):
+        response = client.post("/webhooks/clerk", data="{}", headers=_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processed"
+    assert body["event_type"] == "organizationMembership.deleted"
+    assert body["deleted_user_id"] is not None
+    assert body["clerk_user_id"] == "user_test_membership_delete"
+
+    # Verify user is deleted
+    assert (
+        db_session.query(User)
+        .filter_by(clerk_user_id="user_test_membership_delete")
+        .first()
+        is None
+    )
+
+
+def test_membership_deleted_wrong_dealership_skips_deletion(client, db_session):
+    """If user doesn't belong to the organization, deletion should be skipped."""
+    from app.models.dealership import Dealership
+    from app.models.user import User
+    import uuid
+
+    # Create dealership and user
+    dealership1 = Dealership(
+        id=uuid.uuid4(),
+        clerk_org_id="org_test_1",
+        name="Dealership 1",
+        email="test1@example.com",
+        subscription_status="active",
+        subscription_tier="starter",
+    )
+    db_session.add(dealership1)
+    db_session.flush()
+
+    user = User(
+        id=uuid.uuid4(),
+        dealership_id=dealership1.id,
+        clerk_user_id="user_test_wrong_org",
+        email="wrong@example.com",
+        name="Test User",
+        role="sales_rep",
+    )
+    db_session.add(user)
+    db_session.commit()
+
+    # Try to delete from a different organization
+    event = {
+        "type": "organizationMembership.deleted",
+        "data": {
+            "organization": {
+                "id": "org_test_2",  # Different org
+            },
+            "public_user_data": {
+                "user_id": "user_test_wrong_org",
+            },
+        },
+    }
+
+    with patch("app.api.webhooks.clerk.Webhook.verify", return_value=event):
+        response = client.post("/webhooks/clerk", data="{}", headers=_headers())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "processed"
+    assert body["deleted_user_id"] is None
+    assert "does not belong" in body["message"] or "Dealership not found" in body["message"]
+
+    # Verify user still exists
+    assert (
+        db_session.query(User)
+        .filter_by(clerk_user_id="user_test_wrong_org")
+        .first()
+        is not None
+    )
+

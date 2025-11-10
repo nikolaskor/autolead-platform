@@ -123,6 +123,9 @@ When `app.current_dealership_id` is unset, `dealership_id = NULL` returns FALSE,
 - Backend verifies Svix signature and creates `Dealership` and `User` records automatically
 - First user in dealership becomes admin
 - Idempotent handlers prevent duplicate records
+- `user.deleted` event removes user from database when account is deleted in Clerk
+- `organizationMembership.deleted` event removes user when removed from organization
+- Leads assigned to deleted users are automatically unassigned (via FK constraint)
 
 ### Frontend Architecture (Next.js)
 

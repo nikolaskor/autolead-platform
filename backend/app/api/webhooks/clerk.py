@@ -55,6 +55,8 @@ async def clerk_webhook(
     handlers = {
         "organization.created": _handle_organization_created,
         "organizationMembership.created": _handle_membership_created,
+        "user.deleted": _handle_user_deleted,
+        "organizationMembership.deleted": _handle_membership_deleted,
     }
 
     handler = handlers.get(event_type)
@@ -192,6 +194,131 @@ def _handle_membership_created(data: Dict[str, Any], db: Session) -> Dict[str, A
         "user_id": str(user.id),
         "created_dealership": created_dealership,
         "created_user": created_user,
+    }
+
+
+def _handle_user_deleted(data: Dict[str, Any], db: Session) -> Dict[str, Any]:
+    """Delete user from database when user account is deleted in Clerk.
+    
+    This handler is called when a user account is completely deleted from Clerk.
+    The user and all their associations will be removed from the database.
+    Leads assigned to this user will have their assigned_to set to NULL (via FK constraint).
+    """
+    clerk_user_id = data.get("id")
+    if not clerk_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing user ID in user.deleted event"
+        )
+    
+    user = get_user_from_clerk_id(clerk_user_id, db)
+    if not user:
+        logger.debug("User with Clerk ID %s not found in database, skipping deletion", clerk_user_id)
+        return {
+            "deleted_user_id": None,
+            "clerk_user_id": clerk_user_id,
+            "message": "User not found in database"
+        }
+    
+    user_id = str(user.id)
+    user_email = user.email
+    db.delete(user)
+    logger.info(
+        "Deleted user %s (email: %s, Clerk ID: %s) from database",
+        user_id,
+        user_email,
+        clerk_user_id
+    )
+    
+    return {
+        "deleted_user_id": user_id,
+        "clerk_user_id": clerk_user_id,
+        "user_email": user_email,
+    }
+
+
+def _handle_membership_deleted(data: Dict[str, Any], db: Session) -> Dict[str, Any]:
+    """Delete user from database when removed from organization.
+    
+    In this application, users belong to a single dealership (organization).
+    When a user is removed from an organization, they should be deleted from
+    the database since they can no longer access the platform.
+    
+    Leads assigned to this user will have their assigned_to set to NULL (via FK constraint).
+    """
+    organization = data.get("organization") or {}
+    clerk_org_id = organization.get("id")
+    if not clerk_org_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing organization ID in organizationMembership.deleted event"
+        )
+    
+    public_user = data.get("public_user_data") or {}
+    clerk_user_id = public_user.get("user_id")
+    if not clerk_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing user ID in organizationMembership.deleted event"
+        )
+    
+    # Verify the user belongs to this organization's dealership
+    dealership = get_dealership_from_org(clerk_org_id, db)
+    if not dealership:
+        logger.warning(
+            "Dealership not found for Clerk org %s, cannot verify membership deletion",
+            clerk_org_id
+        )
+        return {
+            "deleted_user_id": None,
+            "clerk_user_id": clerk_user_id,
+            "clerk_org_id": clerk_org_id,
+            "message": "Dealership not found"
+        }
+    
+    user = get_user_from_clerk_id(clerk_user_id, db)
+    if not user:
+        logger.debug(
+            "User with Clerk ID %s not found in database, skipping deletion",
+            clerk_user_id
+        )
+        return {
+            "deleted_user_id": None,
+            "clerk_user_id": clerk_user_id,
+            "clerk_org_id": clerk_org_id,
+            "message": "User not found in database"
+        }
+    
+    # Verify user belongs to this dealership
+    if user.dealership_id != dealership.id:
+        logger.warning(
+            "User %s does not belong to dealership %s, skipping deletion",
+            clerk_user_id,
+            clerk_org_id
+        )
+        return {
+            "deleted_user_id": None,
+            "clerk_user_id": clerk_user_id,
+            "clerk_org_id": clerk_org_id,
+            "message": "User does not belong to this dealership"
+        }
+    
+    user_id = str(user.id)
+    user_email = user.email
+    db.delete(user)
+    logger.info(
+        "Deleted user %s (email: %s, Clerk ID: %s) from dealership %s",
+        user_id,
+        user_email,
+        clerk_user_id,
+        clerk_org_id
+    )
+    
+    return {
+        "deleted_user_id": user_id,
+        "clerk_user_id": clerk_user_id,
+        "clerk_org_id": clerk_org_id,
+        "user_email": user_email,
     }
 
 

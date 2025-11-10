@@ -108,8 +108,10 @@ The backend now provisions dealerships and users automatically when Clerk sends 
    - Navigate to Clerk Dashboard → Webhooks → Add endpoint.
    - Use `<YOUR_URL>/webhooks/clerk` as the target URL.
 3. **Subscribe to events**
-   - `organizationMembership.created` (required)
+   - `organizationMembership.created` (required) - Creates users and dealerships
    - `organization.created` (optional but keeps metadata up to date)
+   - `user.deleted` (recommended) - Removes users from database when deleted in Clerk
+   - `organizationMembership.deleted` (recommended) - Removes users when removed from organization
 4. **Copy the signing secret**
    - Set it as `CLERK_WEBHOOK_SECRET` in your backend environment.
 5. **Redeploy/restart the backend** so the new environment variable takes effect.
