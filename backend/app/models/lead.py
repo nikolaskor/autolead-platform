@@ -55,6 +55,7 @@ class Lead(Base):
     dealership = relationship("Dealership", back_populates="leads")
     assigned_user = relationship("User", back_populates="assigned_leads", foreign_keys=[assigned_to])
     conversations = relationship("Conversation", back_populates="lead", cascade="all, delete-orphan")
+    source_email = relationship("Email", back_populates="lead", uselist=False)  # One-to-one: lead can have one source email
     
     # Constraints
     __table_args__ = (

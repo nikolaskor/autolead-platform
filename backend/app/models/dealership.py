@@ -2,8 +2,8 @@
 Dealership model representing car dealership organizations.
 Each dealership is a separate tenant in the multi-tenant system.
 """
-from sqlalchemy import Column, String, DateTime, func, Index, CheckConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, DateTime, func, CheckConstraint, Boolean
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 import uuid
 
@@ -34,7 +34,12 @@ class Dealership(Base):
     # Subscription information
     subscription_status = Column(String(50), default="active")  # active, trial, cancelled
     subscription_tier = Column(String(50), default="starter")   # starter, professional, enterprise
-    
+
+    # Email integration settings
+    email_integration_enabled = Column(Boolean, default=False, nullable=False)
+    email_forwarding_address = Column(String(255), unique=True, nullable=True)  # e.g., bnh-abc123@leads.autolead.no
+    email_integration_settings = Column(JSONB, nullable=True)  # Future: IMAP credentials, filters, etc.
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -43,6 +48,7 @@ class Dealership(Base):
     users = relationship("User", back_populates="dealership", cascade="all, delete-orphan")
     leads = relationship("Lead", back_populates="dealership", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="dealership", cascade="all, delete-orphan")
+    emails = relationship("Email", back_populates="dealership", cascade="all, delete-orphan")
 
     # Constraints
     __table_args__ = (
