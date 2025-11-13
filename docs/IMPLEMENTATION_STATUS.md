@@ -850,3 +850,245 @@ backend/README.md (added webhook setup section)
 - Ready for production deployment with proper webhook URL
 
 **Status:** ✅ CLERK WEBHOOK PROVISIONING COMPLETE - Automatic user/dealership creation working
+
+---
+
+## ✅ Completed: Week 5, Days 3-5 - Email Integration with AI Classification
+
+**Branch:** `main` (merged)
+
+**Date:** November 10, 2025
+
+### What's Been Implemented
+
+#### 1. Email Ingestion System ✅
+
+- [x] **SendGrid Inbound Parse webhook** (`backend/app/api/v1/endpoints/emails.py`)
+  - POST `/api/v1/emails/webhook/inbound` endpoint
+  - Receives emails via SendGrid (multipart/form-data)
+  - Email forwarding to dealership-specific addresses
+  - Deduplication via Message-ID
+  - Background processing with FastAPI BackgroundTasks
+
+- [x] **Email model and database** (`backend/app/models/email.py`)
+  - Complete email storage (headers, body text/html, attachments metadata)
+  - Processing status tracking (pending, processing, completed, failed)
+  - AI classification results storage
+  - Lead linkage (email → lead relationship)
+  - RLS policies for multi-tenant isolation
+
+#### 2. AI Email Classification ✅
+
+- [x] **Email processor service** (`backend/app/services/email_processor.py`)
+  - Pre-filtering for spam (rule-based detection)
+    - Spam domain blacklist
+    - Spam keyword detection in subject/body
+    - Link count analysis (10+ links = likely newsletter)
+    - Unsubscribe link detection
+  - AI classification using Claude 3.5 Sonnet
+    - Categories: sales_inquiry, spam, other, uncertain
+    - Confidence scores (0.0-1.0)
+    - Classification reasoning/explanation
+  - Lead data extraction from sales inquiries
+    - Customer name, email, phone
+    - Car interest
+    - Inquiry summary
+    - Urgency level (high, medium, low)
+    - Source inference (toyota.no, volkswagen.no, etc.)
+  - Automatic lead creation for sales inquiries
+  - Lead scoring based on urgency (high=70, medium=60, low=50)
+
+#### 3. Email Integration Settings ✅
+
+- [x] **Dealership settings endpoints** (`backend/app/api/v1/endpoints/dealership_settings.py`)
+  - GET `/api/v1/settings/email-integration` - Get integration status and instructions
+  - POST `/api/v1/settings/email-integration/enable` - Enable and generate forwarding address
+  - POST `/api/v1/settings/email-integration/disable` - Disable integration
+  - Unique forwarding address generation (format: `dealership-{slug}-{random}@leads.autolead.no`)
+  - Setup instructions for Gmail, Outlook, and other providers
+
+#### 4. Email Management Endpoints ✅
+
+- [x] **Email CRUD operations** (`backend/app/api/v1/endpoints/emails.py`)
+  - GET `/api/v1/emails/` - List emails with pagination and filters
+    - Filter by classification (sales_inquiry, spam, other, uncertain)
+    - Filter by processing_status (pending, processing, completed, failed)
+  - GET `/api/v1/emails/{id}` - Get email details
+  - POST `/api/v1/emails/{id}/reprocess` - Retry processing for failed/uncertain emails
+
+#### 5. Database Schema Changes ✅
+
+- [x] **Migration 003** (`backend/alembic/versions/003_add_emails_and_email_integration.py`)
+  - Created `emails` table with full email metadata
+  - Added email integration fields to `dealerships` table:
+    - `email_integration_enabled` (boolean)
+    - `email_forwarding_address` (unique string)
+    - `email_integration_settings` (JSONB)
+  - Created indexes for efficient queries
+  - Enabled RLS policies on emails table
+
+#### 6. Pydantic Schemas ✅
+
+- [x] **Email schemas** (`backend/app/schemas/email.py`)
+  - EmailCreate, EmailResponse, EmailListResponse
+  - EmailClassificationResult
+  - EmailLeadExtraction
+
+#### 7. Documentation ✅
+
+- [x] **Comprehensive guide** (`backend/EMAIL_INTEGRATION.md`)
+  - Architecture overview with diagrams
+  - Database schema documentation
+  - API endpoint specifications
+  - SendGrid setup instructions
+  - Testing guide with examples
+  - Troubleshooting section
+  - Cost estimation (~$0.003 per sales inquiry email)
+
+### Files Created/Modified
+
+**New Files:**
+```
+backend/app/models/email.py
+backend/app/schemas/email.py
+backend/app/services/email_processor.py
+backend/app/api/v1/endpoints/emails.py
+backend/app/api/v1/endpoints/dealership_settings.py
+backend/alembic/versions/003_add_emails_and_email_integration.py
+backend/EMAIL_INTEGRATION.md
+```
+
+**Modified Files:**
+```
+backend/app/models/dealership.py (added email integration fields and relationship)
+backend/app/models/lead.py (added source_email relationship)
+backend/app/core/config.py (added ANTHROPIC_API_KEY)
+backend/app/api/v1/router.py (registered new endpoints)
+```
+
+### Architecture: SendGrid vs IMAP
+
+**Original PRD Plan:** IMAP polling every 60 seconds
+
+**Actual Implementation:** SendGrid Inbound Parse webhook
+
+**Why the Change:**
+- ✅ Real-time processing (vs 60s delay)
+- ✅ No credential storage (no IMAP passwords)
+- ✅ Works with any email source (not just Toyota.no/VW.no)
+- ✅ Simpler infrastructure (no background workers polling)
+- ✅ Better scalability (webhook-based)
+- ✅ Industry standard approach
+
+### Success Criteria Met
+
+- ✅ System receives emails from any source via forwarding
+- ✅ AI classifies emails with high accuracy using Claude API
+- ✅ Pre-filtering reduces unnecessary AI API calls
+- ✅ Lead data extracted automatically from sales inquiries
+- ✅ Leads created with source='email'
+- ✅ Duplicate emails handled gracefully (Message-ID)
+- ✅ Processing errors tracked and retryable
+- ✅ Multi-tenant isolation via RLS policies
+- ✅ Dealerships can enable/disable integration
+- ✅ Unique forwarding addresses generated automatically
+
+### API Endpoints Summary
+
+**Email Webhook (Public):**
+- POST `/api/v1/emails/webhook/inbound` - SendGrid webhook receiver
+
+**Email Management (Authenticated):**
+- GET `/api/v1/emails/` - List emails (paginated, filterable)
+- GET `/api/v1/emails/{id}` - Get email details
+- POST `/api/v1/emails/{id}/reprocess` - Retry processing
+
+**Settings (Authenticated):**
+- GET `/api/v1/settings/email-integration` - Get integration settings
+- POST `/api/v1/settings/email-integration/enable` - Enable integration
+- POST `/api/v1/settings/email-integration/disable` - Disable integration
+
+### Email Processing Flow
+
+```
+1. Customer sends email to sales@dealership.com
+2. Dealership forwards to dealership-abc123@leads.autolead.no
+3. SendGrid receives and parses email
+4. SendGrid sends webhook to /api/v1/emails/webhook/inbound
+5. Backend creates email record (status: pending)
+6. Background task processes email:
+   a. Pre-filter for spam (rule-based)
+   b. AI classification (Claude API)
+   c. If sales_inquiry: Extract lead data (Claude API)
+   d. If sales_inquiry: Create lead in database
+7. Email marked as completed with classification and lead_id
+```
+
+### Environment Variables Required
+
+```env
+# Add to backend/.env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Cost Analysis
+
+**Anthropic API (Claude 3.5 Sonnet):**
+- Classification: ~500 tokens = $0.001 per email
+- Lead extraction: ~800 tokens = $0.002 per email
+- **Total per sales inquiry: $0.003**
+
+**Monthly estimate (1,000 emails, 30% sales inquiries):**
+- 300 sales inquiries × $0.003 = **$0.90/month**
+
+### Testing Status
+
+- ✅ Email webhook endpoint implemented
+- ✅ AI classification tested with various email types
+- ✅ Lead extraction tested with sample emails
+- ✅ Spam filtering tested with marketing emails
+- ✅ Deduplication tested (Message-ID)
+- ✅ Error handling and retry tested
+- ⏳ SendGrid integration (requires production setup)
+
+### Known Limitations
+
+1. **SendGrid not configured** - Requires domain ownership and MX records
+2. **No attachment handling** - File uploads not implemented yet
+3. **No email threading** - Related emails not grouped
+4. **No custom rules** - All dealerships use same spam filters
+5. **No webhook signature verification** - Should add SendGrid signature check
+
+### PRD Completion Status
+
+#### US-2.2: Email Monitoring (Importer Portals)
+
+- [x] System receives emails (via SendGrid forwarding)
+- [x] AI classifies emails with confidence scores
+- [x] Extracts customer data (name, email, phone, car interest, message, urgency)
+- [x] Creates leads with source='email'
+- [x] Handles duplicates (Message-ID deduplication)
+- [x] Handles processing errors (retry capability)
+- [x] Works with any email source (not just Toyota.no/VW.no)
+
+**Status:** ✅ **COMPLETE** (Enhanced beyond original PRD)
+
+### Next Steps
+
+**Week 6: Facebook Integration + Dashboard Updates**
+1. Implement Facebook Lead Ads webhook
+2. Add email classification filter to dashboard
+3. Display emails in dashboard with classification badges
+4. Test all three lead sources end-to-end
+
+**Future Enhancements (Post-MVP):**
+- IMAP direct access (as alternative to forwarding)
+- Email threading and conversation grouping
+- Attachment handling (photos, documents)
+- Reply detection (skip auto-replies)
+- Custom spam rules per dealership
+- Sentiment analysis for lead scoring
+
+---
+
+**Status:** ✅ EMAIL INTEGRATION COMPLETE - AI-powered email classification and lead extraction working

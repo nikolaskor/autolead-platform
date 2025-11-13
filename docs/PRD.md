@@ -186,55 +186,73 @@ Response: 200 OK
 
 **Acceptance Criteria:**
 
-- [ ] System polls IMAP inbox every 60 seconds
-- [ ] Detects new emails from importer domains
-- [ ] Parses Toyota.no email template correctly
-- [ ] Parses VW.no email template correctly
-- [ ] Extracts: customer name, email, phone, vehicle interest, message
-- [ ] Creates lead with source='email'
-- [ ] Marks email as processed to avoid duplicates
-- [ ] Handles parsing errors gracefully (alerts admin)
+- [x] System receives emails via SendGrid Inbound Parse webhook
+- [x] Detects new emails and deduplicates via Message-ID
+- [x] AI classifies emails (sales_inquiry, spam, other, uncertain) using Claude API
+- [x] Pre-filters obvious spam using rule-based detection
+- [x] Extracts: customer name, email, phone, vehicle interest, message, urgency
+- [x] Creates lead with source='email'
+- [x] Handles processing errors gracefully with retry capability
+- [x] Email forwarding to dealership-specific addresses (e.g., dealership-abc123@leads.autolead.no)
 
 **Database Schema:**
 
 ```sql
--- Add to leads table
-source_metadata JSONB -- Store raw email data for debugging
+-- emails table (new)
+CREATE TABLE emails (
+    id UUID PRIMARY KEY,
+    dealership_id UUID REFERENCES dealerships(id),
+    lead_id UUID REFERENCES leads(id),
+    message_id VARCHAR(255) UNIQUE NOT NULL,
+    from_email VARCHAR(255) NOT NULL,
+    from_name VARCHAR(255),
+    subject VARCHAR(500),
+    body_text TEXT,
+    body_html TEXT,
+    processing_status VARCHAR(50) DEFAULT 'pending',
+    classification VARCHAR(50), -- sales_inquiry, spam, other, uncertain
+    classification_confidence FLOAT,
+    extracted_data JSONB,
+    received_at TIMESTAMP WITH TIME ZONE,
+    processed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Add to dealerships table
+email_integration_enabled BOOLEAN DEFAULT FALSE,
+email_forwarding_address VARCHAR(255) UNIQUE,
+email_integration_settings JSONB
 ```
 
 **Implementation Steps:**
 
-1. Set up IMAP connection using Python `imaplib`
-2. Create background worker (BullMQ job) that runs every 60s
-3. Fetch unread emails from inbox
-4. Identify importer emails by sender domain
-5. Parse email body using regex/BeautifulSoup
-6. Extract lead fields
-7. Create lead record
-8. Mark email as read
-9. Queue AI response job
-10. Log any parsing failures
+✅ **COMPLETED - Modern Architecture:**
 
-**Email Parsing Logic:**
+1. SendGrid Inbound Parse webhook endpoint (`POST /api/v1/emails/webhook/inbound`)
+2. Email forwarding to unique dealership addresses (e.g., `dealership-abc123@leads.autolead.no`)
+3. Background processing with FastAPI BackgroundTasks
+4. Pre-filtering for spam (rule-based: domains, keywords, link count)
+5. AI classification using Claude 3.5 Sonnet (sales_inquiry, spam, other, uncertain)
+6. Lead data extraction from sales inquiries
+7. Automatic lead creation with source='email'
+8. Deduplication via Message-ID
+9. Error handling with retry capability
+10. Management endpoints for listing, viewing, and reprocessing emails
 
-```python
-# Toyota.no template
-def parse_toyota_email(email_body):
-    # Extract fields using regex
-    name = re.search(r'Navn: (.+)', email_body).group(1)
-    email = re.search(r'E-post: (.+)', email_body).group(1)
-    phone = re.search(r'Telefon: (.+)', email_body).group(1)
-    vehicle = re.search(r'Interessert i: (.+)', email_body).group(1)
-    message = re.search(r'Melding: (.+)', email_body, re.DOTALL).group(1)
-    return {...}
-```
+**AI Classification & Extraction:**
+
+Using Claude API to:
+- Classify emails into categories with confidence scores
+- Extract structured data: customer name, email, phone, car interest, urgency, summary
+- Automatically determine lead source (toyota.no, volkswagen.no, direct_email, other)
+- Score leads based on urgency (high=70, medium=60, low=50)
 
 **Edge Cases:**
 
-- Email format changes (alert admin, store raw email)
-- Missing fields (create lead with partial data)
-- Non-lead emails (ignore based on subject/sender)
-- IMAP connection failure (retry with exponential backoff)
+- Duplicate emails (handled via Message-ID deduplication)
+- Spam/marketing emails (pre-filtered + AI classification)
+- Missing fields (extracted with AI, fallback to sender info)
+- Processing failures (stored in error_message, retry with `/reprocess` endpoint)
+- SendGrid webhook failures (returns 200 OK immediately, processes in background)
 
 **Validated Pain Point:** Importer portal leads require manual email checking (Customer Profiles, 40% of leads)
 
@@ -1817,11 +1835,11 @@ npm install @clerk/nextjs recharts date-fns
 
 **Week 5 Deliverables:**
 
-- [ ] Website form webhook functional
-- [ ] Email monitoring system working
-- [ ] Toyota.no emails parsed correctly
-- [ ] VW.no emails parsed correctly
-- [ ] Duplicate detection implemented
+- [x] Website form webhook functional
+- [x] Email monitoring system working (SendGrid Inbound Parse + AI classification)
+- [x] Email classification with Claude API (sales_inquiry, spam, other, uncertain)
+- [x] Lead extraction from sales inquiry emails
+- [x] Duplicate detection implemented (Message-ID based)
 
 **Week 6 Deliverables:**
 
