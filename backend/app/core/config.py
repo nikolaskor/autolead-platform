@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     # Anthropic AI (for email classification and lead extraction)
     ANTHROPIC_API_KEY: Optional[str] = None
 
+    # Facebook Lead Ads Integration
+    FACEBOOK_APP_ID: Optional[str] = None
+    FACEBOOK_APP_SECRET: Optional[str] = None
+    FACEBOOK_VERIFY_TOKEN: Optional[str] = None
+    FACEBOOK_PAGE_ACCESS_TOKEN: Optional[str] = None  # For testing with single page
+    FACEBOOK_GRAPH_API_VERSION: str = "v21.0"
+
     # Application
     APP_NAME: str = "Norvalt API"
     APP_VERSION: str = "1.0.0"

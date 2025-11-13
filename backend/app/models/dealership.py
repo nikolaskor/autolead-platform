@@ -40,6 +40,11 @@ class Dealership(Base):
     email_forwarding_address = Column(String(255), unique=True, nullable=True)  # e.g., bnh-abc123@leads.autolead.no
     email_integration_settings = Column(JSONB, nullable=True)  # Future: IMAP credentials, filters, etc.
 
+    # Facebook Lead Ads integration settings
+    facebook_integration_enabled = Column(Boolean, default=False, nullable=False)
+    facebook_page_tokens = Column(JSONB, nullable=True)  # Encrypted Page Access Tokens: {"page_id": "encrypted_token"}
+    facebook_integration_settings = Column(JSONB, nullable=True)  # App ID, webhook settings, etc.
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
