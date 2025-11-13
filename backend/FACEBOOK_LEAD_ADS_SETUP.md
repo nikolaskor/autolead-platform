@@ -13,6 +13,7 @@ This guide walks you through setting up Facebook Lead Ads integration for Autole
 7. [Backend Configuration](#backend-configuration)
 8. [Testing](#testing)
 9. [Troubleshooting](#troubleshooting)
+10. [Known Limitations (MVP)](#known-limitations-mvp)
 
 ---
 
@@ -612,6 +613,43 @@ Before going live:
   ]
 }
 ```
+
+---
+
+## Known Limitations (MVP)
+
+The current implementation has the following limitations that will be addressed in future releases:
+
+### 1. Single Dealership Support
+- **Current Behavior**: All Facebook leads are assigned to the first dealership in the database
+- **Impact**: Multi-tenant support not yet implemented for Facebook integration
+- **Workaround**: Ensure only one dealership is configured during MVP testing
+- **Future**: Page ID to dealership mapping will be implemented using `facebook_page_tokens` JSONB field
+
+### 2. Single Page Access Token
+- **Current Behavior**: Uses a single `FACEBOOK_PAGE_ACCESS_TOKEN` environment variable for all pages
+- **Impact**: Cannot support multiple Facebook pages simultaneously
+- **Workaround**: Configure one page per Autolead instance during MVP
+- **Future**: Page-specific tokens will be retrieved from `dealerships.facebook_page_tokens` field
+
+### 3. Token Storage
+- **Current Behavior**: Page Access Tokens are stored in plain text in environment variables
+- **Impact**: Tokens visible in environment configuration
+- **Note**: In production, tokens should be encrypted before storing in the database
+- **Future Options**:
+  - Application-level encryption using cryptography.fernet
+  - Database-level encryption using PostgreSQL pgcrypto extension
+  - External secrets management (AWS Secrets Manager, Azure Key Vault)
+
+### 4. No Retry Logic
+- **Current Behavior**: Failed Graph API requests are logged but not retried
+- **Impact**: Transient failures may result in lost leads
+- **Future**: Implement exponential backoff retry logic for Graph API calls
+
+### 5. No Rate Limit Handling
+- **Current Behavior**: Rate limit errors are logged but not queued for retry
+- **Impact**: Leads submitted during rate limiting may be lost
+- **Future**: Implement queue-based processing with automatic retry
 
 ---
 

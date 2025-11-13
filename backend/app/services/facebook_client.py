@@ -231,7 +231,7 @@ class FacebookClient:
             raw_data=data
         )
 
-    def verify_token(self) -> bool:
+    async def verify_token(self) -> bool:
         """
         Verify that the access token is valid.
 
@@ -245,8 +245,8 @@ class FacebookClient:
         params = {"access_token": self.access_token}
 
         try:
-            with httpx.Client() as client:
-                response = client.get(url, params=params, timeout=5.0)
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, timeout=5.0)
                 return response.status_code == 200
         except Exception as e:
             logger.error(f"Error verifying Facebook token: {str(e)}")
