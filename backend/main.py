@@ -97,7 +97,7 @@ async def shutdown_event():
 def read_root():
     """Root endpoint."""
     return {
-        "message": "Norvalt API is running",
+        "message": "Autolead API is running",
         "version": settings.APP_VERSION,
         "docs": "/docs"
     }
