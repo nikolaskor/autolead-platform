@@ -3,7 +3,7 @@ Main router for API v1.
 Combines all endpoint routers.
 """
 from fastapi import APIRouter
-from .endpoints import leads, conversations, emails, dealership_settings
+from .endpoints import leads, conversations, emails, dealership_settings, facebook
 
 # Create main v1 router
 api_router = APIRouter()
@@ -29,5 +29,10 @@ api_router.include_router(
     dealership_settings.router,
     prefix="/settings",
     tags=["settings"]
+)
+
+api_router.include_router(
+    facebook.router,
+    tags=["facebook"]
 )
 
