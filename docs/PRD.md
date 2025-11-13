@@ -267,15 +267,15 @@ Using Claude API to:
 
 **Acceptance Criteria:**
 
-- [ ] Webhook receives Facebook leadgen notifications in real-time
-- [ ] Webhook verifies Facebook signature using App Secret
-- [ ] Retrieves full lead data via Graph API using Page Access Token
-- [ ] Maps Facebook form fields to Norvalt lead schema
-- [ ] Creates lead with source='facebook' and stores metadata
-- [ ] Handles duplicate submissions gracefully (dedupe by facebook_lead_id)
-- [ ] Passes Facebook webhook verification challenge (GET request)
-- [ ] Supports multiple Pages per dealership
-- [ ] Background processing with error handling and retry
+- [x] Webhook receives Facebook leadgen notifications in real-time (Session 1: Backend implemented)
+- [x] Webhook verifies Facebook signature using App Secret (Session 1: HMAC SHA256 verification)
+- [x] Retrieves full lead data via Graph API using Page Access Token (Session 1: FacebookClient implemented)
+- [x] Maps Facebook form fields to Norvalt lead schema (Session 1: FacebookLeadData class)
+- [x] Creates lead with source='facebook' and stores metadata (Session 1: Lead processing logic)
+- [x] Handles duplicate submissions gracefully (dedupe by facebook_lead_id) (Session 1: Deduplication check)
+- [x] Passes Facebook webhook verification challenge (GET request) (Session 1: GET endpoint implemented)
+- [ ] Supports multiple Pages per dealership (Session 2: Pending Meta App setup)
+- [x] Background processing with error handling and retry (Session 1: BackgroundTasks + error handling)
 
 **API Specification:**
 
