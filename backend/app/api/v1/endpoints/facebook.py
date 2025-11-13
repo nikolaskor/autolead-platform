@@ -5,17 +5,17 @@ Handles webhook verification and leadgen event processing.
 import hmac
 import hashlib
 import logging
-from fastapi import APIRouter, Request, HTTPException, BackgroundTasks, Depends
+from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
-from typing import Dict, Any
 from uuid import UUID
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import SessionLocal
 from app.services.facebook_client import FacebookClient, FacebookAuthError, FacebookGraphAPIError
 from app.models.lead import Lead
 from app.models.conversation import Conversation
+from app.models.dealership import Dealership
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +58,7 @@ async def verify_facebook_webhook(request: Request):
 @router.post("/webhooks/facebook")
 async def receive_facebook_webhook(
     request: Request,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    background_tasks: BackgroundTasks
 ):
     """
     Facebook leadgen webhook receiver (POST request).
@@ -99,7 +98,6 @@ async def receive_facebook_webhook(
         entries = data.get("entry", [])
 
         for entry in entries:
-            page_id = entry.get("id")
             changes = entry.get("changes", [])
 
             for change in changes:
@@ -118,8 +116,7 @@ async def receive_facebook_webhook(
                         process_facebook_lead,
                         leadgen_id=leadgen_id,
                         page_id=page_id,
-                        form_id=form_id,
-                        db=db
+                        form_id=form_id
                     )
 
     # Return 200 immediately
@@ -138,8 +135,8 @@ def verify_signature(payload: bytes, signature_header: str) -> bool:
         True if signature is valid, False otherwise
     """
     if not settings.FACEBOOK_APP_SECRET:
-        logger.warning("FACEBOOK_APP_SECRET not configured, skipping signature verification")
-        return True  # Allow in development if secret not configured
+        logger.error("FACEBOOK_APP_SECRET not configured, rejecting webhook")
+        return False
 
     if not signature_header:
         logger.warning("Missing X-Hub-Signature-256 header")
@@ -166,8 +163,7 @@ def verify_signature(payload: bytes, signature_header: str) -> bool:
 async def process_facebook_lead(
     leadgen_id: str,
     page_id: str,
-    form_id: str,
-    db: Session
+    form_id: str
 ):
     """
     Background task to process Facebook lead.
@@ -184,10 +180,12 @@ async def process_facebook_lead(
         leadgen_id: Facebook lead ID
         page_id: Facebook page ID
         form_id: Facebook form ID
-        db: Database session
     """
     logger.info(f"🔄 Processing Facebook lead: {leadgen_id}")
 
+    # Create new database session for background task
+    db = SessionLocal()
+    
     try:
         # Check for duplicate lead
         existing_lead = db.query(Lead).filter(
@@ -218,19 +216,18 @@ async def process_facebook_lead(
         if lead_data.is_test:
             logger.info(f"🧪 Test lead detected: {leadgen_id}, skipping AI response")
             # Still create lead for testing purposes, but mark it
-            pass
 
         # TODO: Determine dealership_id from page_id
         # For now, we'll need to add logic to map page_id to dealership_id
         # This requires storing page_id -> dealership_id mapping in database
 
         # For MVP/testing: Use a default dealership (first one in database)
-        dealership = db.query(Lead).first()
+        dealership = db.query(Dealership).first()
         if not dealership:
-            logger.error("No dealerships found in database")
+            logger.error("No dealerships configured in database. Please create at least one dealership before processing Facebook leads.")
             return
 
-        dealership_id = str(dealership.dealership_id)  # Use existing lead's dealership as fallback
+        dealership_id = str(dealership.id)
 
         # Convert to Lead model dictionary
         lead_dict = lead_data.to_lead_dict(dealership_id)
@@ -273,3 +270,5 @@ async def process_facebook_lead(
         logger.error(f"❌ Error processing Facebook lead {leadgen_id}: {str(e)}")
         db.rollback()
         raise
+    finally:
+        db.close()

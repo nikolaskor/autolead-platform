@@ -10,8 +10,6 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from datetime import datetime
 
 from app.main import app
-from app.models.lead import Lead
-from app.models.conversation import Conversation
 from app.services.facebook_client import FacebookLeadData
 
 
