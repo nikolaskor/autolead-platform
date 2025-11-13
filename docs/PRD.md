@@ -261,57 +261,131 @@ Using Claude API to:
 #### US-2.3: Facebook Lead Ads Integration
 
 **Priority:** MUST-HAVE
-**Story:** As a dealership, I want leads from my Facebook ads to automatically appear in Norvalt immediately after submission.
+**Story:** As a dealership, I want leads from my Facebook Lead Ads campaigns to automatically appear in Norvalt immediately after a customer submits the form.
+
+**Scope Note:** This integration focuses on **Facebook Lead Ads** (lead capture forms shown in ads). This is NOT Facebook Messenger integration (two-way chat). Messenger integration may be considered in future phases if market demand increases.
 
 **Acceptance Criteria:**
 
-- [ ] Webhook receives Facebook lead notifications
-- [ ] Webhook verifies Facebook signature
-- [ ] Retrieves full lead data via Graph API
-- [ ] Maps Facebook form fields to Norvalt lead fields
-- [ ] Creates lead with source='facebook'
-- [ ] Handles duplicate submissions
-- [ ] Passes Facebook webhook verification challenge
+- [ ] Webhook receives Facebook leadgen notifications in real-time
+- [ ] Webhook verifies Facebook signature using App Secret
+- [ ] Retrieves full lead data via Graph API using Page Access Token
+- [ ] Maps Facebook form fields to Norvalt lead schema
+- [ ] Creates lead with source='facebook' and stores metadata
+- [ ] Handles duplicate submissions gracefully (dedupe by facebook_lead_id)
+- [ ] Passes Facebook webhook verification challenge (GET request)
+- [ ] Supports multiple Pages per dealership
+- [ ] Background processing with error handling and retry
 
 **API Specification:**
 
 ```
-GET /webhooks/facebook
-  - Returns hub.challenge for verification
+GET /api/v1/webhooks/facebook
+  - Facebook webhook verification endpoint
+  - Validates hub.verify_token
+  - Returns hub.challenge to confirm subscription
 
-POST /webhooks/facebook
-  - Receives lead notification
-  - Validates signature
-  - Queues lead processing job
+POST /api/v1/webhooks/facebook
+  - Receives leadgen events from Facebook
+  - Validates X-Hub-Signature-256 header
+  - Processes lead asynchronously (background task)
+  - Returns 200 immediately to prevent timeout
 ```
 
 **Implementation Steps:**
 
-1. Create Facebook App in Meta Business Suite
-2. Set up webhook endpoint `/webhooks/facebook`
-3. Implement webhook verification (GET request)
-4. Implement webhook receiver (POST request)
-5. Verify Facebook signature (security requirement)
-6. Extract lead_id from webhook payload
-7. Call Graph API to get full lead data
-8. Map fields to Norvalt schema
-9. Create lead record
-10. Queue AI response job
+1. **Meta App Setup:**
+   - Create Facebook App in Meta for Developers
+   - Add Webhooks and Lead Ads products
+   - Configure webhook subscriptions for leadgen events
+   - Generate Page Access Tokens for each dealership's page
 
-**External Integration:**
+2. **Backend Implementation:**
+   - Create `/api/v1/webhooks/facebook` endpoint
+   - Implement GET handler for webhook verification
+   - Implement POST handler for leadgen events
+   - Add signature verification middleware
+   - Integrate Graph API client for lead retrieval
+   - Map Facebook fields to Lead model
+   - Store facebook_lead_id in source_metadata for deduplication
 
-- Facebook Graph API: `GET /{lead-id}`
-- Requires: App ID, App Secret, Page Access Token
-- Rate limits: 200 calls per hour per user
+3. **Configuration:**
+   - Add FACEBOOK_APP_ID, FACEBOOK_APP_SECRET to settings
+   - Add FACEBOOK_VERIFY_TOKEN to settings
+   - Store Page Access Tokens per dealership (encrypted)
+
+4. **Testing:**
+   - Test webhook verification with Meta
+   - Test lead submission with Facebook Test Tools
+   - Verify lead creation in database
+   - Test duplicate lead handling
+   - Test error scenarios (Graph API failures)
+
+**Graph API Integration:**
+
+```
+GET https://graph.facebook.com/v21.0/{leadgen-id}
+  ?access_token={page-access-token}
+
+Response:
+{
+  "created_time": "2024-11-13T10:30:00+0000",
+  "id": "123456789",
+  "field_data": [
+    {"name": "full_name", "values": ["Ola Nordmann"]},
+    {"name": "email", "values": ["ola@example.com"]},
+    {"name": "phone_number", "values": ["+4712345678"]},
+    {"name": "vehicle_interest", "values": ["Tesla Model 3"]}
+  ]
+}
+```
+
+**Field Mapping:**
+- `full_name` → `customer_name`
+- `email` → `customer_email`
+- `phone_number` → `customer_phone`
+- `vehicle_interest` / `which_car` → `vehicle_interest`
+- Any custom questions → `initial_message` (concatenated)
+- Store raw `field_data` in `source_metadata` for debugging
+
+**Requirements:**
+- App ID and App Secret (from Meta App Dashboard)
+- Page Access Token (generated per Facebook Page)
+- Webhook Verify Token (random string we generate)
+- Pages must subscribe to App's webhook
+
+**Rate Limits:**
+- Facebook Graph API: 200 calls per hour per user
+- Webhook deliveries: Real-time, no rate limits on receiving
+- Retry policy: Exponential backoff for Graph API failures
 
 **Edge Cases:**
 
-- Webhook signature mismatch (reject request)
-- Graph API timeout (retry with exponential backoff)
-- Missing form fields (map to null)
-- Test leads from Facebook (mark as test, don't send AI response)
+- **Webhook signature mismatch:** Reject with 401, log security alert
+- **Graph API timeout:** Queue retry job with exponential backoff (2s, 4s, 8s)
+- **Missing form fields:** Map to null, store warning in logs
+- **Test leads:** Facebook sends test leads with `is_test: true` flag - skip AI response
+- **Duplicate leads:** Check `source_metadata.facebook_lead_id`, update if exists
+- **Invalid Page Access Token:** Alert dealership, provide token refresh instructions
+- **Multiple pages per dealership:** Support array of page tokens in settings
 
-**Validated Pain Point:** Facebook leads require manual download (Customer Profiles, 10% of leads)
+**Security Considerations:**
+
+- Always verify `X-Hub-Signature-256` header using HMAC SHA256
+- Store Page Access Tokens encrypted in database
+- Validate `hub.verify_token` matches our secret
+- Rate limit webhook endpoint to prevent abuse
+- Log all webhook requests for audit trail
+
+**Dealership Setup Process:**
+
+1. Dealership creates Lead Ad campaign in Facebook Ads Manager
+2. Admin enables Facebook integration in Norvalt settings
+3. Admin connects Facebook Page via OAuth flow
+4. System subscribes to leadgen webhook for that Page
+5. Leads automatically flow into Norvalt when submitted
+
+**Validated Pain Point:** Facebook leads require manual CSV download from Ads Manager, causing 30+ minute delays. Dealerships miss hot leads. (Customer Profiles, 10% of leads)
 
 ---
 

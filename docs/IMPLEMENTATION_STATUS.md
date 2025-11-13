@@ -1092,3 +1092,186 @@ ANTHROPIC_API_KEY=sk-ant-...
 ---
 
 **Status:** ✅ EMAIL INTEGRATION COMPLETE - AI-powered email classification and lead extraction working
+
+---
+
+## 🚧 In Progress: Week 6, Days 1-3 - Facebook Lead Ads Integration
+
+**Branch:** `claude/facebook-leads-integration-011CV5fzouUmUMUYzJDTKwg1`
+
+**Date Started:** November 13, 2025
+
+### What's Being Implemented
+
+#### 1. Facebook Lead Ads Webhook 🚧
+
+- [ ] **Webhook endpoints** (`backend/app/api/v1/endpoints/facebook.py`)
+  - GET `/api/v1/webhooks/facebook` - Webhook verification
+  - POST `/api/v1/webhooks/facebook` - Leadgen event receiver
+  - Signature verification (X-Hub-Signature-256)
+  - Background processing with FastAPI BackgroundTasks
+  - Error handling and retry logic
+
+#### 2. Graph API Integration 🚧
+
+- [ ] **Facebook client service** (`backend/app/services/facebook_client.py`)
+  - Graph API client for lead retrieval
+  - GET `/{lead-id}` endpoint integration
+  - Field data extraction and mapping
+  - Access token management
+  - Rate limit handling
+  - Retry logic for API failures
+
+#### 3. Lead Processing 🚧
+
+- [ ] **Lead creation from Facebook data**
+  - Map Facebook field_data to Lead schema
+  - Extract: full_name, email, phone_number, vehicle_interest
+  - Store raw field_data in source_metadata
+  - Deduplicate by facebook_lead_id
+  - Mark test leads appropriately
+  - Create conversation record for initial submission
+
+#### 4. Configuration & Security 🚧
+
+- [ ] **Environment variables** (`.env`)
+  - FACEBOOK_APP_ID
+  - FACEBOOK_APP_SECRET
+  - FACEBOOK_VERIFY_TOKEN
+  - FACEBOOK_GRAPH_API_VERSION (default: v21.0)
+
+- [ ] **Dealership settings**
+  - Store Page Access Tokens per dealership (encrypted)
+  - Support multiple Facebook Pages per dealership
+  - Enable/disable Facebook integration toggle
+
+#### 5. Database Schema Updates 🚧
+
+- [ ] **Migration (if needed)**
+  - Add `facebook_integration_enabled` to dealerships table
+  - Add `facebook_page_tokens` (JSONB, encrypted) to dealerships table
+  - Ensure source_metadata JSONB can store facebook_lead_id
+
+#### 6. Testing 🚧
+
+- [ ] **Unit tests** (`tests/test_facebook_webhook.py`)
+  - Webhook verification (GET request)
+  - Signature validation
+  - Lead processing from webhook payload
+  - Duplicate detection
+  - Test lead handling
+  - Error scenarios
+
+- [ ] **Integration testing**
+  - Facebook Test Tools for leadgen events
+  - End-to-end lead flow
+  - Graph API integration
+  - Multi-page support
+
+#### 7. Documentation 🚧
+
+- [ ] **Setup guide** (`backend/FACEBOOK_LEAD_ADS_SETUP.md`)
+  - Meta for Developers account setup
+  - Facebook App creation
+  - Webhook configuration
+  - Page Access Token generation
+  - Testing with Facebook Test Tools
+  - Troubleshooting guide
+
+- [ ] **Frontend updates**
+  - Display Facebook leads with source badge
+  - Show Facebook-specific metadata in lead detail view
+
+### Architecture: Facebook Lead Ads Flow
+
+```
+1. Customer sees Facebook Lead Ad
+2. Customer fills out lead form on Facebook
+3. Facebook sends webhook to /api/v1/webhooks/facebook
+   {
+     "object": "page",
+     "entry": [{
+       "id": "page_id",
+       "time": 1699901234,
+       "changes": [{
+         "field": "leadgen",
+         "value": {
+           "leadgen_id": "123456789",
+           "page_id": "987654321",
+           "form_id": "456789123",
+           "created_time": 1699901234
+         }
+       }]
+     }]
+   }
+4. Backend validates signature (X-Hub-Signature-256)
+5. Backend extracts leadgen_id from payload
+6. Background task calls Graph API:
+   GET /v21.0/{leadgen_id}?access_token={page_access_token}
+7. Backend maps field_data to Lead model
+8. Backend creates lead with source='facebook'
+9. Backend triggers AI response workflow (email to customer)
+10. Sales rep receives notification
+```
+
+### Implementation Timeline
+
+**Day 1 (Nov 13):**
+- ✅ Update PRD with detailed Facebook Lead Ads specification
+- 🚧 Create implementation guide
+- 🚧 Set up Meta for Developers App
+- 🚧 Implement webhook verification endpoint (GET)
+
+**Day 2 (Nov 14):**
+- [ ] Implement webhook receiver endpoint (POST)
+- [ ] Implement Graph API client
+- [ ] Add signature verification
+- [ ] Create lead processing logic
+- [ ] Add configuration settings
+
+**Day 3 (Nov 15):**
+- [ ] Write tests
+- [ ] Test with Facebook Test Tools
+- [ ] Update frontend for Facebook leads
+- [ ] Documentation finalization
+- [ ] End-to-end testing
+
+### Success Criteria
+
+- [ ] Webhook verification passes Meta's validation
+- [ ] Leadgen events received and processed successfully
+- [ ] Leads created with source='facebook' in database
+- [ ] Facebook field data correctly mapped to Lead schema
+- [ ] Duplicate leads handled (dedupe by facebook_lead_id)
+- [ ] Test leads marked and excluded from AI processing
+- [ ] Signature verification prevents unauthorized requests
+- [ ] Graph API integration handles errors gracefully
+- [ ] Frontend displays Facebook leads with proper badges
+- [ ] Documentation complete for dealership setup
+
+### Known Limitations & Future Enhancements
+
+**Current Scope (Week 6):**
+- ✅ Facebook Lead Ads only (not Messenger)
+- ✅ One-way lead capture (form submissions)
+- ✅ Basic field mapping
+- ✅ Single page per dealership (MVP)
+
+**Future Enhancements (Post-MVP):**
+- Multiple pages per dealership
+- Facebook Messenger integration (two-way chat)
+- Advanced field mapping configuration
+- Custom form field handling
+- Lead scoring based on Facebook campaign data
+- Campaign performance analytics
+
+### PRD Reference
+
+This implementation fulfills **US-2.3: Facebook Lead Ads Integration** from the PRD.
+
+**Priority:** MUST-HAVE
+**Target Completion:** November 15, 2025 (End of Week 6, Day 3)
+
+---
+
+**Status:** 🚧 IN PROGRESS - Facebook Lead Ads integration underway
