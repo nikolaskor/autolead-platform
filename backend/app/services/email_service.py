@@ -8,6 +8,7 @@ Features:
 - Error handling and retries
 - Multi-tenant support with Reply-To
 """
+import html
 import logging
 from typing import Optional
 from sendgrid import SendGridAPIClient
@@ -22,6 +23,10 @@ class EmailService:
 
     def __init__(self):
         """Initialize SendGrid client."""
+        if not settings.SENDGRID_API_KEY:
+            raise ValueError(
+                "SENDGRID_API_KEY is not set. Please provide a valid API key in your configuration."
+            )
         self.client = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
 
     def send_initial_response(
@@ -54,7 +59,15 @@ class EmailService:
             dealership_address: Dealership address
 
         Returns:
-            dict with keys: email_id (str), status (str)
+            dict: On success, contains keys:
+                - email_id (str or None): The ID of the sent email from SendGrid.
+                - status (str): "sent" on success.
+                - provider (str): The email provider used ("sendgrid").
+                - status_code (int): The HTTP status code from the provider.
+            On failure, contains keys:
+                - email_id (None)
+                - status (str): "failed"
+                - error (str): Error message.
         """
         try:
             # Build HTML email
@@ -126,22 +139,30 @@ class EmailService:
         dealership_email: Optional[str],
         dealership_address: Optional[str]
     ) -> str:
-        """Build HTML email template."""
-        # Contact info section
+        """Build HTML email template with proper HTML escaping to prevent XSS."""
+        # Escape all user-provided content
+        customer_name_escaped = html.escape(customer_name)
+        response_text_escaped = html.escape(response_text)
+        dealership_name_escaped = html.escape(dealership_name)
+        
+        # Contact info section with escaped values
         contact_html = ""
         if dealership_phone:
-            contact_html += f'<p style="margin: 5px 0;">📞 Telefon: <a href="tel:{dealership_phone}" style="color: #1a73e8;">{dealership_phone}</a></p>'
+            dealership_phone_escaped = html.escape(dealership_phone)
+            contact_html += f'<p style="margin: 5px 0;">📞 Telefon: <a href="tel:{dealership_phone_escaped}" style="color: #1a73e8;">{dealership_phone_escaped}</a></p>'
         if dealership_email:
-            contact_html += f'<p style="margin: 5px 0;">✉️ E-post: <a href="mailto:{dealership_email}" style="color: #1a73e8;">{dealership_email}</a></p>'
+            dealership_email_escaped = html.escape(dealership_email)
+            contact_html += f'<p style="margin: 5px 0;">✉️ E-post: <a href="mailto:{dealership_email_escaped}" style="color: #1a73e8;">{dealership_email_escaped}</a></p>'
         if dealership_address:
-            contact_html += f'<p style="margin: 5px 0;">📍 Adresse: {dealership_address}</p>'
+            dealership_address_escaped = html.escape(dealership_address)
+            contact_html += f'<p style="margin: 5px 0;">📍 Adresse: {dealership_address_escaped}</p>'
 
         return f"""<!DOCTYPE html>
 <html lang="no">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Svar fra {dealership_name}</title>
+    <title>Svar fra {dealership_name_escaped}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
     <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5;">
@@ -151,7 +172,7 @@ class EmailService:
                     <!-- Header -->
                     <tr>
                         <td style="background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0;">
-                            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">{dealership_name}</h1>
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 600;">{dealership_name_escaped}</h1>
                         </td>
                     </tr>
 
@@ -159,16 +180,16 @@ class EmailService:
                     <tr>
                         <td style="padding: 40px 30px;">
                             <p style="margin: 0 0 20px 0; font-size: 16px; color: #333; line-height: 1.6;">
-                                Hei {customer_name}!
+                                Hei {customer_name_escaped}!
                             </p>
 
                             <div style="margin: 20px 0; padding: 20px; background-color: #f8f9fa; border-left: 4px solid #1a73e8; border-radius: 4px;">
-                                <p style="margin: 0; font-size: 16px; color: #333; line-height: 1.6; white-space: pre-wrap;">{response_text}</p>
+                                <p style="margin: 0; font-size: 16px; color: #333; line-height: 1.6; white-space: pre-wrap;">{response_text_escaped}</p>
                             </div>
 
                             <p style="margin: 20px 0 0 0; font-size: 16px; color: #333; line-height: 1.6;">
                                 Med vennlig hilsen,<br>
-                                <strong>{dealership_name}</strong>
+                                <strong>{dealership_name_escaped}</strong>
                             </p>
                         </td>
                     </tr>
@@ -189,7 +210,7 @@ class EmailService:
                     <tr>
                         <td style="padding: 20px 30px; background-color: #f8f9fa; border-radius: 0 0 8px 8px; text-align: center;">
                             <p style="margin: 0; font-size: 12px; color: #999;">
-                                Denne meldingen ble sendt av {dealership_name}<br>
+                                Denne meldingen ble sendt av {dealership_name_escaped}<br>
                                 Powered by <a href="https://autolead.no" style="color: #1a73e8; text-decoration: none;">Autolead</a>
                             </p>
                         </td>

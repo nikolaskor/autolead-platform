@@ -123,7 +123,7 @@ async def receive_email_webhook(
     }
 
 
-def process_email_background(email_id: UUID):
+async def process_email_background(email_id: UUID):
     """
     Background task to process an email.
 
@@ -131,7 +131,6 @@ def process_email_background(email_id: UUID):
     """
     from ....core.database import SessionLocal
     from ....services.lead_processor import lead_processor
-    import asyncio
 
     db = SessionLocal()
     try:
@@ -141,11 +140,11 @@ def process_email_background(email_id: UUID):
 
             # If a lead was created from this email, trigger AI response
             if email.lead_id:
-                asyncio.run(lead_processor.process_new_lead(
+                await lead_processor.process_new_lead(
                     lead_id=email.lead_id,
                     db=db,
                     skip_ai_response=False
-                ))
+                )
     finally:
         db.close()
 
