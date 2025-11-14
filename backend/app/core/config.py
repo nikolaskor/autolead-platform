@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     # Anthropic AI (for email classification and AI responses)
     ANTHROPIC_API_KEY: Optional[str] = None
 
-    # Email Service (Resend)
-    RESEND_API_KEY: Optional[str] = None
+    # Email Service (SendGrid - for both inbound and outbound)
+    SENDGRID_API_KEY: Optional[str] = None
 
     # Facebook Lead Ads Integration
     FACEBOOK_APP_ID: Optional[str] = None

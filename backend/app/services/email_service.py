@@ -1,15 +1,17 @@
 """
-Email Service for sending customer emails via Resend.
+Email Service for sending customer emails via SendGrid.
 
 Features:
 - Branded email templates
 - Norwegian language support
 - Delivery tracking
 - Error handling and retries
+- Multi-tenant support with Reply-To
 """
 import logging
 from typing import Optional
-import resend
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content, ReplyTo
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -19,8 +21,8 @@ class EmailService:
     """Service for sending emails to customers."""
 
     def __init__(self):
-        """Initialize Resend client."""
-        resend.api_key = settings.RESEND_API_KEY
+        """Initialize SendGrid client."""
+        self.client = SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
 
     def send_initial_response(
         self,
@@ -36,6 +38,11 @@ class EmailService:
         """
         Send initial AI-generated response to customer.
 
+        Multi-tenant setup:
+        - From: Shared domain (no-reply@autolead.no)
+        - From Name: Dealership name
+        - Reply-To: Dealership email
+
         Args:
             to_email: Customer email
             to_name: Customer name
@@ -43,7 +50,7 @@ class EmailService:
             ai_response: AI-generated response text
             dealership_name: Name of the dealership
             dealership_phone: Dealership phone
-            dealership_email: Dealership email
+            dealership_email: Dealership email (used for Reply-To)
             dealership_address: Dealership address
 
         Returns:
@@ -69,28 +76,37 @@ class EmailService:
                 dealership_email=dealership_email
             )
 
-            # Send email via Resend
-            result = resend.Emails.send({
-                "from": f"{dealership_name} <no-reply@autolead.no>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_content,
-                "text": text_content
-            })
+            # Create SendGrid email message
+            message = Mail(
+                from_email=Email("no-reply@autolead.no", dealership_name),
+                to_emails=To(to_email, to_name),
+                subject=subject,
+                plain_text_content=Content("text/plain", text_content),
+                html_content=Content("text/html", html_content)
+            )
+
+            # Set Reply-To to dealership email (multi-tenant isolation)
+            if dealership_email:
+                message.reply_to = ReplyTo(dealership_email, dealership_name)
+
+            # Send email via SendGrid
+            response = self.client.send(message)
 
             logger.info(
                 f"Email sent successfully to {to_email}",
                 extra={
-                    "email_id": result.get("id"),
+                    "status_code": response.status_code,
                     "to": to_email,
-                    "dealership": dealership_name
+                    "dealership": dealership_name,
+                    "reply_to": dealership_email
                 }
             )
 
             return {
-                "email_id": result.get("id"),
+                "email_id": response.headers.get("X-Message-Id"),
                 "status": "sent",
-                "provider": "resend"
+                "provider": "sendgrid",
+                "status_code": response.status_code
             }
 
         except Exception as e:
