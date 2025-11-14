@@ -130,12 +130,22 @@ def process_email_background(email_id: UUID):
     This is called after the webhook returns 200 OK to SendGrid.
     """
     from ....core.database import SessionLocal
+    from ....services.lead_processor import lead_processor
+    import asyncio
 
     db = SessionLocal()
     try:
         email = db.query(Email).filter(Email.id == email_id).first()
         if email:
             email_processor.process_email(db, email)
+
+            # If a lead was created from this email, trigger AI response
+            if email.lead_id:
+                asyncio.run(lead_processor.process_new_lead(
+                    lead_id=email.lead_id,
+                    db=db,
+                    skip_ai_response=False
+                ))
     finally:
         db.close()
 

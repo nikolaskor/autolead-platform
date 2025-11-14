@@ -256,15 +256,19 @@ async def process_facebook_lead(
 
             logger.info(f"✅ Created conversation record for lead {new_lead.id}")
 
-        # TODO: Trigger AI response workflow
+        # Trigger AI response workflow
         # - Generate AI response using Claude API
         # - Send email to customer
-        # - Send SMS notification to sales rep
         # - Update lead status to 'contacted'
-
         if not lead_data.is_test:
-            logger.info(f"📧 TODO: Trigger AI response for lead {new_lead.id}")
-            # background_tasks.add_task(trigger_ai_response, new_lead.id)
+            logger.info(f"📧 Triggering AI response for lead {new_lead.id}")
+            from ....services.lead_processor import lead_processor
+            import asyncio
+            asyncio.run(lead_processor.process_new_lead(
+                lead_id=new_lead.id,
+                db=db,
+                skip_ai_response=False
+            ))
 
     except Exception as e:
         logger.error(f"❌ Error processing Facebook lead {leadgen_id}: {str(e)}")
