@@ -142,11 +142,10 @@ async def receive_form_submission(
         )
 
         # Queue AI response workflow in background
+        # Note: Background task creates its own DB session to avoid "Session is closed" errors
         background_tasks.add_task(
-            lead_processor.process_new_lead,
-            lead_id=lead.id,
-            db=db,
-            skip_ai_response=False
+            _process_lead_in_background_webhooks,
+            lead_id=lead.id
         )
 
         return {
@@ -163,3 +162,20 @@ async def receive_form_submission(
             status_code=500,
             detail="Failed to process form submission. Please try again."
         )
+
+
+async def _process_lead_in_background_webhooks(lead_id: UUID):
+    """
+    Background task wrapper that creates its own database session.
+    This prevents "Session is closed" errors from sharing the request's session.
+    """
+    from ....core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        await lead_processor.process_new_lead(
+            lead_id=lead_id,
+            db=db,
+            skip_ai_response=False
+        )
+    finally:
+        db.close()

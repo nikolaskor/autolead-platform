@@ -21,6 +21,10 @@ class AIService:
 
     def __init__(self):
         """Initialize Claude API client."""
+        if not settings.ANTHROPIC_API_KEY:
+            raise ValueError(
+                "ANTHROPIC_API_KEY is not set. Please provide a valid API key in your configuration."
+            )
         self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         self.model = "claude-3-5-sonnet-20241022"  # Latest Claude 3.5 Sonnet
 
@@ -47,7 +51,12 @@ class AIService:
             available_vehicles: List of vehicles in stock (optional)
 
         Returns:
-            dict with keys: response (str), confidence (float)
+            dict with the following keys:
+                - response (str): The generated response text.
+                - confidence (float): Confidence score for the response (0.9 for successful AI generation, 0.3 for fallback).
+                - model (str): The model used to generate the response ("claude-3-5-sonnet-20241022" on success, "fallback" on failure).
+                - tokens_used (int): Number of tokens used in the API call (present only on success).
+                - error (str): Error message (present only on failure).
         """
         try:
             # Build system prompt
@@ -127,7 +136,12 @@ class AIService:
             follow_up_number: Which follow-up this is (1, 2, 3...)
 
         Returns:
-            dict with keys: response (str), confidence (float)
+            dict with the following keys:
+                - response (str): The generated follow-up message.
+                - confidence (float): Confidence score for the response (0.85 for successful AI generation, 0.3 for fallback).
+                - model (str): The model used to generate the response ("claude-3-5-sonnet-20241022" on success, "fallback" on failure).
+                - tokens_used (int): Number of tokens used in the response (present only on success).
+                - error (str): Error message if response generation failed (present only on failure).
         """
         try:
             system_prompt = f"""Du er en hjelpsom kundeservicerepresentant for {dealership_name},

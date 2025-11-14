@@ -22,7 +22,6 @@ from .email_service import email_service
 from ..models.lead import Lead
 from ..models.conversation import Conversation
 from ..models.dealership import Dealership
-from ..models.vehicle import Vehicle
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +88,14 @@ class LeadProcessor:
                     }
 
             # Step 1: Generate AI response
-            ai_result = await self._generate_ai_response(lead, dealership, db)
+            ai_result = self._generate_ai_response(lead, dealership, db)
             if not ai_result["success"]:
                 return ai_result
 
             ai_response = ai_result["response"]
 
             # Step 2: Send email to customer
-            email_result = await self._send_customer_email(
+            email_result = self._send_customer_email(
                 lead, dealership, ai_response
             )
             if not email_result["success"]:
@@ -143,7 +142,7 @@ class LeadProcessor:
                 "error": str(e)
             }
 
-    async def _generate_ai_response(
+    def _generate_ai_response(
         self,
         lead: Lead,
         dealership: Dealership,
@@ -151,22 +150,6 @@ class LeadProcessor:
     ) -> dict:
         """Generate AI response for the lead."""
         try:
-            # Fetch available vehicles (for context)
-            available_vehicles = db.query(Vehicle).filter(
-                Vehicle.dealership_id == dealership.id,
-                Vehicle.status == "available"
-            ).limit(10).all()
-
-            vehicles_list = [
-                {
-                    "make": v.make,
-                    "model": v.model,
-                    "year": v.year,
-                    "price": v.price
-                }
-                for v in available_vehicles
-            ] if available_vehicles else None
-
             # Generate AI response
             result = ai_service.generate_initial_response(
                 customer_name=lead.customer_name or "kunde",
@@ -175,7 +158,7 @@ class LeadProcessor:
                 dealership_name=dealership.name,
                 dealership_phone=dealership.phone,
                 dealership_email=dealership.email,
-                available_vehicles=vehicles_list
+                available_vehicles=None  # Vehicle inventory not yet implemented
             )
 
             return {
@@ -193,7 +176,7 @@ class LeadProcessor:
                 "error": str(e)
             }
 
-    async def _send_customer_email(
+    def _send_customer_email(
         self,
         lead: Lead,
         dealership: Dealership,

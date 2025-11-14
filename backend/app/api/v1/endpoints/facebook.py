@@ -263,12 +263,11 @@ async def process_facebook_lead(
         if not lead_data.is_test:
             logger.info(f"📧 Triggering AI response for lead {new_lead.id}")
             from ....services.lead_processor import lead_processor
-            import asyncio
-            asyncio.run(lead_processor.process_new_lead(
+            await lead_processor.process_new_lead(
                 lead_id=new_lead.id,
                 db=db,
                 skip_ai_response=False
-            ))
+            )
 
     except Exception as e:
         logger.error(f"❌ Error processing Facebook lead {leadgen_id}: {str(e)}")

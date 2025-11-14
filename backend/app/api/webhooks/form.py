@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Dict, Any
 from uuid import UUID
 
@@ -130,11 +130,10 @@ async def form_webhook(
         )
 
         # Queue AI auto-response workflow in background
+        # Note: Background task creates its own DB session to avoid "Session is closed" errors
         background_tasks.add_task(
-            lead_processor.process_new_lead,
-            lead_id=lead.id,
-            db=db,
-            skip_ai_response=False
+            _process_lead_in_background,
+            lead_id=lead.id
         )
 
         return FormWebhookResponse(
@@ -152,3 +151,20 @@ async def form_webhook(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process form submission"
         ) from exc
+
+
+async def _process_lead_in_background(lead_id: UUID):
+    """
+    Background task wrapper that creates its own database session.
+    This prevents "Session is closed" errors from sharing the request's session.
+    """
+    from ...core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        await lead_processor.process_new_lead(
+            lead_id=lead_id,
+            db=db,
+            skip_ai_response=False
+        )
+    finally:
+        db.close()
