@@ -7,13 +7,14 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Path, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...models.dealership import Dealership
 from ...models.lead import Lead
 from ...schemas import FormWebhookRequest, FormWebhookResponse
+from ...services.lead_processor import lead_processor
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 async def form_webhook(
     dealership_id: UUID = Path(..., description="Dealership UUID"),
     form_data: FormWebhookRequest = ...,
+    background_tasks: BackgroundTasks = ...,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -127,8 +129,12 @@ async def form_webhook(
             form_data.email
         )
 
-        # TODO: Queue AI response job (Week 7)
-        # await queue_ai_response_job(lead.id)
+        # Queue AI auto-response workflow in background
+        # Note: Background task creates its own DB session to avoid "Session is closed" errors
+        background_tasks.add_task(
+            _process_lead_in_background,
+            lead_id=lead.id
+        )
 
         return FormWebhookResponse(
             lead_id=lead.id,
@@ -145,3 +151,20 @@ async def form_webhook(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process form submission"
         ) from exc
+
+
+async def _process_lead_in_background(lead_id: UUID):
+    """
+    Background task wrapper that creates its own database session.
+    This prevents "Session is closed" errors from sharing the request's session.
+    """
+    from ...core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        await lead_processor.process_new_lead(
+            lead_id=lead_id,
+            db=db,
+            skip_ai_response=False
+        )
+    finally:
+        db.close()

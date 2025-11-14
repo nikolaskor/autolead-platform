@@ -22,8 +22,11 @@ class Settings(BaseSettings):
     CLERK_JWKS_URL: Optional[str] = None
     CLERK_WEBHOOK_SECRET: str
 
-    # Anthropic AI (for email classification and lead extraction)
+    # Anthropic AI (for email classification and AI responses)
     ANTHROPIC_API_KEY: Optional[str] = None
+
+    # Email Service (SendGrid - for both inbound and outbound)
+    SENDGRID_API_KEY: Optional[str] = None
 
     # Facebook Lead Ads Integration
     FACEBOOK_APP_ID: Optional[str] = None
