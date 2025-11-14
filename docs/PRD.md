@@ -1509,11 +1509,11 @@ async def process_new_lead(job):
 
 - [x] Initialize Git repositories (norvalt-backend, norvalt-frontend)
 - [x] Initialize FastAPI project structure
-- [ ] Set up virtual environment and dependencies
-- [ ] Create `requirements.txt` with core packages
-- [ ] Initialize Next.js 14 project with App Router
-- [ ] Install and configure Shadcn UI
-- [ ] Set up development environment variables
+- [x] Set up virtual environment and dependencies
+- [x] Create `requirements.txt` with core packages
+- [x] Initialize Next.js 14 project with App Router
+- [x] Install and configure Shadcn UI
+- [x] Set up development environment variables
 
 **Dependencies:**
 
